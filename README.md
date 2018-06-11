@@ -15,10 +15,10 @@ The columns can be modified through the script or via a text editor. You can use
 - *example string* - this will generate as fixed text in each row.
 - *test value +* - this will generate with an incremental count, represented by the plus sign, so the first row will be *test value 1* and row twenty will be *test value 20*.
 - *test value (50,100)* - this will generate with a random number, where the range of this random number is set in the brackets, so a row may generate as *test value 63*. There are also some different behaviours with number ranges:
-		- *(\*0.01,0.99)* - this will generate a random decimal with unlimited decimal places between 0.01 and 0.99 for each row.
-		- *(£10,1000)* - this will generate a random number between 10 and 1000 with two decimal places, for example, 278.56.
-		- *(3%20.5,30.5)* - this will generate a random number between 20.5 and 30.5 with 3 decimal places. The number of decimal places needs to be before the percentage sign.
-		- *(-4,2)* - this will generate a number between -4 and 2 with no decimals.
+    - *(\*0.01,0.99)* - this will generate a random decimal with unlimited decimal places between 0.01 and 0.99 for each row.
+    - *(£10,1000)* - this will generate a random number between 10 and 1000 with two decimal places, for example, 278.56.
+    - *(3%20.5,30.5)* - this will generate a random number between 20.5 and 30.5 with 3 decimal places. The number of decimal places needs to be before the percentage sign.
+    - *(-4,2)* - this will generate a number between -4 and 2 with no decimals.
 
 
 Columns can also be added and deleted via the script.
