@@ -12,7 +12,9 @@ def get_settings(): # gets the settings from the settings json file, if the sett
         with open('settings.json', 'w') as jsonfile:
             settings = [
                 {"key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
-                {"key":"foldername", "desc":"Name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"}
+                {"key":"foldername", "desc":"Name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
+                {"key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
+                {"key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"}
             ]
             json.dump(settings, jsonfile)
 
@@ -77,12 +79,20 @@ def update_settings(settings): # saves all changes to the settings in the settin
         json.dump(settings, jsonfile)
 
 def get_columns(): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
-    if os.path.exists('columns.json') == False:
-        with open('columns.json', 'w') as jsonfile:
+    settings = get_settings()
+
+    jsonfilename = "columns.json"
+
+    for x in range (0, len(settings)):
+        if settings[x]["key"] == "columnfile":
+            jsonfilename = settings[x]["value"]
+
+    if os.path.exists(jsonfilename) == False:
+        with open(jsonfilename, "w") as jsonfile:
             data = [{"value": "value 1", "name": "column 1"}, {"value": "value 2", "name": "column 2"}, {"value": "value 3", "name": "column 3"}]
             json.dump(data, jsonfile)
 
-    with open('columns.json') as jsonfile:
+    with open(jsonfilename) as jsonfile:
         data = json.load(jsonfile)
     '''
     for y in range (0, len(data)): # dealing with encoding issues, but this does not address the issue properly
@@ -173,7 +183,14 @@ def get_one_column(data, index): # displays a selected column in the terminal an
             notification = "\nInvalid option...\n"
 
 def update_column_data(data): # saves all changes to the column in the columns json file
-    with open('columns.json', "w") as jsonfile:
+    jsonfilename = "columns.json"
+    settings = get_settings()
+
+    for x in range (0, len(settings)):
+        if settings[x]["key"] == "columnfile":
+            jsonfilename = settings[x]["value"]
+
+    with open(jsonfilename, "w") as jsonfile:
         json.dump(data, jsonfile)
 
 def get_values(value, rownumber): # reads the value for each column, and processes it into dummy data to add to the csv
@@ -235,7 +252,7 @@ def get_values(value, rownumber): # reads the value for each column, and process
         currentindex = currentindex + 1
     return output
 
-def create_file(file, folder, columns, blankname, notification = ""): # creates and writes the file
+def create_file(file, folder, columns, blankname, rownumber = 0, notification = ""): # creates and writes the file
     clear()
 
     if blankname:
@@ -246,7 +263,7 @@ def create_file(file, folder, columns, blankname, notification = ""): # creates 
     if rows == "q" or rows == "b":
         menu()
     elif rows.isdigit() == False and (rows != 'q' or rows != 'b'):
-        create_file(file, folder, columns, blankname, "Please enter a number...\n\n")
+        create_file(file, folder, columns, blankname, rownumber, "Please enter a number...\n\n")
 
     if folder != "":
         if os.path.exists(folder + "/") == False:
@@ -272,7 +289,7 @@ def create_file(file, folder, columns, blankname, notification = ""): # creates 
 
         for z in range (1, int(rows) + 1):
             for x in range (0, len(columns)):
-                values.append(get_values(columns[x]["value"], z))
+                values.append(get_values(columns[x]["value"], int(rownumber) + z))
 
             writer.writerows([values])
 
@@ -285,6 +302,8 @@ def menu(notification = ""): # main menu, first thing the user will see
 
     nofilename = False
     foldername = ""
+    rownumber = 0
+    columnfile = ""
 
     settings = get_settings()
     get_columns()
@@ -298,8 +317,12 @@ def menu(notification = ""): # main menu, first thing the user will see
                 filename = settings[x]["value"]
         elif settings[x]["key"] == "foldername":
             foldername = settings[x]["value"]
+        elif settings[x]["key"] == "rownumber":
+            rownumber = settings[x]["value"]
+        elif settings[x]["key"] == "columnfile":
+            columnfile = settings[x]["value"]
 
-    print("Dummy data generator v" + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\n" + notification)
+    print("Dummy data generator v" + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\nCurrent column file: " + columnfile + "\n" + notification)
 
     print("1. Generate file")
     print("2. Add and edit columns")
@@ -309,7 +332,7 @@ def menu(notification = ""): # main menu, first thing the user will see
     selection = input("\nEnter option: ")
 
     if selection == "1":
-        create_file(filename, foldername, get_columns(), nofilename)
+        create_file(filename, foldername, get_columns(), nofilename, rownumber)
     if selection == "2":
         get_column_data()
     if selection == "3":
@@ -319,6 +342,6 @@ def menu(notification = ""): # main menu, first thing the user will see
     else:
         menu("\nInvalid option...\n")
 
-version = "0.1.1"
+version = "0.1.2"
 
 menu()

@@ -28,11 +28,15 @@ Columns can also be added and deleted via the script.
 
 #### Settings
 
-A settings file (*settings.json*) is also created when the script has been run for the first time. Currently, the settings are as follows:
+A settings file (*settings.json*) is also created when the script has been run for the first time. Currently, the following can be changed via the settings:
 
 - Default name of files generated - set to "data.csv" by default. If left blank, there will be a prompt to enter a file name before a file is generated.
 
 - Name of folder where generated files are located - set to "generated-data" by default. If left blank, the files will generate in the same location as the script.
+
+- Index value where the script starts counting from when creating rows - set to 0 by default. The value is not inclusive, counts will start at value + 1.
+
+- Name of the JSON file being used to load the columns - set to "columns.json" by default. If the file does not exist, it will be created with default columns.
 
 You can modify the settings from within the script, or directly via the JSON file.
 
