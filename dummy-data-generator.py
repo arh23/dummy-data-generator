@@ -10,7 +10,10 @@ def clear(platformname = sys.platform): # clear the terminal buffer ~ NOTE: this
 def get_settings(): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
     if os.path.exists('settings.json') == False:
         with open('settings.json', 'w') as jsonfile:
-            settings = [{"key":"filename", "desc": "Default name of files generated", "value": "data.csv"}]
+            settings = [
+                {"key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
+                {"key":"foldername", "desc":"Name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"}
+            ]
             json.dump(settings, jsonfile)
 
     with open('settings.json') as jsonfile:
@@ -30,10 +33,10 @@ def get_settings_data(notification = ""): # displays the settings in the termina
         count = 0
 
         for y in range (1, len(settings) + 1):
-            print(str(y) + ". " + settings[y - 1]["desc"] + " : " + settings[y - 1]["value"])
+            print("---- No." + str(y) + " ----\n" + settings[y - 1]["desc"] + ": \n" + settings[y - 1]["value"])
             count = y
 
-        option = input("\nEnter the setting number(1 to " + str(len(settings)) + ") to edit the setting, or:\nq. Quit\nOption:")
+        option = input("\nEnter the setting number (1 to " + str(len(settings)) + ") to edit the setting, or:\nq. Quit\nOption:")
 
         if option == "q":
             menu()
@@ -61,7 +64,7 @@ def get_one_setting(settings, index): # displays a selected setting in the termi
         if option == "q":
             menu()
         elif option == "b":
-            get_column_data()
+            get_settings_data()
         elif option == "1":
             settings[index - 1]["value"] = input("Enter new setting value:")
             update_settings(settings)
@@ -232,11 +235,24 @@ def get_values(value, rownumber): # reads the value for each column, and process
         currentindex = currentindex + 1
     return output
 
-def create_file(file, columns, blankname): # creates and writes the file
+def create_file(file, folder, columns, blankname, notification = ""): # creates and writes the file
+    clear()
+
     if blankname:
         file = input("Enter a name for the file (do not include .csv): ") + ".csv"
 
-    rows = input("\nNumber of rows to generate: ")
+    rows = input(notification + "Enter the number of rows to generate (or enter 'q' or 'b' to go back to the menu): ")
+
+    if rows == "q" or rows == "b":
+        menu()
+    elif rows.isdigit() == False and (rows != 'q' or rows != 'b'):
+        create_file(file, folder, columns, blankname, "Please enter a number...\n\n")
+
+    if folder != "":
+        if os.path.exists(folder + "/") == False:
+            os.makedirs(folder + "/")
+
+        file = folder + "/" + file
 
     print("\nCreating file...")
 
@@ -268,6 +284,7 @@ def menu(notification = ""): # main menu, first thing the user will see
     clear()
 
     nofilename = False
+    foldername = ""
 
     settings = get_settings()
     get_columns()
@@ -279,6 +296,8 @@ def menu(notification = ""): # main menu, first thing the user will see
                 filename = "No file name set..."
             else:
                 filename = settings[x]["value"]
+        elif settings[x]["key"] == "foldername":
+            foldername = settings[x]["value"]
 
     print("Dummy data generator v" + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\n" + notification)
 
@@ -290,7 +309,7 @@ def menu(notification = ""): # main menu, first thing the user will see
     selection = input("\nEnter option: ")
 
     if selection == "1":
-        create_file(filename, get_columns(), nofilename)
+        create_file(filename, foldername, get_columns(), nofilename)
     if selection == "2":
         get_column_data()
     if selection == "3":
@@ -300,6 +319,6 @@ def menu(notification = ""): # main menu, first thing the user will see
     else:
         menu("\nInvalid option...\n")
 
-version = "0.1.0"
+version = "0.1.1"
 
 menu()
