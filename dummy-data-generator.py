@@ -1,56 +1,80 @@
 #! coding: utf-8
 import csv, random, time, json, os, sys, platform
 
+class Settings():
+    def __init__(self):
+        self.update_values()
+
+    def update_values(self):
+        self.json = self.get_settings()
+        self.filename = self.get_setting_value("filename")
+        self.foldername = self.get_setting_value("foldername")
+        self.rownumber = self.get_setting_value("rownumber")
+        self.columnfile = self.get_setting_value("columnfile") 
+
+    def get_settings(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
+        if os.path.exists('settings.json') == False:
+            with open('settings.json', 'w') as jsonfile:
+                settings = [
+                    {"key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
+                    {"key":"foldername", "desc":"Name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
+                    {"key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
+                    {"key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"}
+                ]
+                json.dump(settings, jsonfile)
+
+        with open('settings.json') as jsonfile:
+            settings = json.load(jsonfile)
+        
+        return settings
+
+    def get_setting_value(self, value): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
+        for x in range (0, len(self.json)):
+            if self.json[x]["key"] == value:
+                settingvalue = self.json[x]["value"]
+        
+        return settingvalue
+
+    def update_settings(self): # saves all changes to the settings in the settings json file
+        with open('settings.json', "w") as jsonfile:
+            json.dump(self.json, jsonfile)
+
+        self.update_values()
+
+settings = Settings()
+
 def clear(platformname = sys.platform): # clear the terminal buffer ~ NOTE: this seems to be quite buggy, need to come back to this
     if platformname == "win32":
         os.system("cls")
     else:
         os.system("clear")
 
-def get_settings(): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
-    if os.path.exists('settings.json') == False:
-        with open('settings.json', 'w') as jsonfile:
-            settings = [
-                {"key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
-                {"key":"foldername", "desc":"Name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
-                {"key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
-                {"key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"}
-            ]
-            json.dump(settings, jsonfile)
-
-    with open('settings.json') as jsonfile:
-        settings = json.load(jsonfile)
-    
-    return settings
-
-def get_settings_data(notification = ""): # displays the settings in the terminal, and allows the user to select settings
+def view_settings(notification = ""): # displays the settings in the terminal, and allows the user to select settings
     option = ""
     while option != "q":
-        settings = get_settings()
-
         clear()
 
         print(notification + "The following settings alter how the test data is generated:\n")
 
         count = 0
 
-        for y in range (1, len(settings) + 1):
-            print("---- No." + str(y) + " ----\n" + settings[y - 1]["desc"] + ": \n" + settings[y - 1]["value"])
+        for y in range (1, len(settings.json) + 1):
+            print("---- No." + str(y) + " ----\n" + settings.json[y - 1]["desc"] + ": \n" + settings.json[y - 1]["value"])
             count = y
 
-        option = input("\nEnter the setting number (1 to " + str(len(settings)) + ") to edit the setting, or:\nq. Quit\nOption:")
+        option = input("\nEnter the setting number (1 to " + str(len(settings.json)) + ") to edit the setting, or:\nq. Quit\nOption:")
 
         if option == "q":
             menu()
         elif option.isdigit():
             if int(option) <= count:
-                get_one_setting(settings, int(option))
+                get_one_setting(int(option))
             elif int(option) > count:
-                get_settings_data("No setting with the number " + option + "...\n")
+                view_settings("No setting with the number " + option + "...\n")
         else:
-            get_settings_data("No setting with the number " + option + "...\n")
+            view_settings("No setting with the number " + option + "...\n")
 
-def get_one_setting(settings, index): # displays a selected setting in the terminal and provides the user with more options for the particular setting
+def get_one_setting(index): # displays a selected setting in the terminal and provides the user with more options for the particular setting
     option = ""
     notification = ""
 
@@ -58,34 +82,24 @@ def get_one_setting(settings, index): # displays a selected setting in the termi
         clear()
 
         print("Setting number " + str(index) + ": \n")
-        print("----------\nDescription: " + settings[index - 1]["desc"])
-        print("Value: " + settings[index - 1]["value"] + "\n----------")
+        print("----------\nDescription: " + settings.json[index - 1]["desc"])
+        print("Value: " + settings.json[index - 1]["value"] + "\n----------")
 
         option = input(notification + "\n1. Edit setting value\nb. Go back\nq. Quit\nOption:")
 
         if option == "q":
             menu()
         elif option == "b":
-            get_settings_data()
+            view_settings()
         elif option == "1":
-            settings[index - 1]["value"] = input("Enter new setting value:")
-            update_settings(settings)
-            get_settings_data("Value for setting " + str(index) + " updated!\n\n")
+            settings.json[index - 1]["value"] = input("Enter new setting value:")
+            settings.update_settings()
+            view_settings("Value for setting " + str(index) + " updated!\n\n")
         else:
             notification = "\nInvalid option...\n"
 
-def update_settings(settings): # saves all changes to the settings in the settings json file
-    with open('settings.json', "w") as jsonfile:
-        json.dump(settings, jsonfile)
-
 def get_columns(): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
-    settings = get_settings()
-
-    jsonfilename = "columns.json"
-
-    for x in range (0, len(settings)):
-        if settings[x]["key"] == "columnfile":
-            jsonfilename = settings[x]["value"]
+    jsonfilename = settings.columnfile
 
     if os.path.exists(jsonfilename) == False:
         with open(jsonfilename, "w") as jsonfile:
@@ -94,7 +108,7 @@ def get_columns(): # gets the settings from the settings json file, if the setti
                 {"value": "value 2", "name": "column 2"}, 
                 {"value": "value 3", "name": "column 3"}
             ]
-            
+
             json.dump(data, jsonfile)
 
     with open(jsonfilename) as jsonfile:
@@ -188,12 +202,7 @@ def get_one_column(data, index): # displays a selected column in the terminal an
             notification = "\nInvalid option...\n"
 
 def update_column_data(data): # saves all changes to the column in the columns json file
-    jsonfilename = "columns.json"
-    settings = get_settings()
-
-    for x in range (0, len(settings)):
-        if settings[x]["key"] == "columnfile":
-            jsonfilename = settings[x]["value"]
+    jsonfilename = settings.columnfile
 
     with open(jsonfilename, "w") as jsonfile:
         json.dump(data, jsonfile)
@@ -278,10 +287,15 @@ def get_values(value, rownumber): # reads the value for each column, and process
         currentindex = currentindex + 1
     return output
 
-def create_file(file, folder, columns, blankname, rownumber = 0, notification = ""): # creates and writes the file
+def create_file(notification = ""): # creates and writes the file
     clear()
 
-    if blankname:
+    file = settings.filename
+    folder = settings.foldername
+    columns = get_columns()
+    rownumber = settings.rownumber
+
+    if file == "":
         file = input("Enter a name for the file (do not include .csv): ") + ".csv"
 
     rows = input(notification + "Enter the number of rows to generate (or enter 'q' or 'b' to go back to the menu): ")
@@ -289,7 +303,7 @@ def create_file(file, folder, columns, blankname, rownumber = 0, notification = 
     if rows == "q" or rows == "b":
         menu()
     elif rows.isdigit() == False and (rows != 'q' or rows != 'b'):
-        create_file(file, folder, columns, blankname, rownumber, "Please enter a number...\n\n")
+        create_file("Please enter a number...\n\n")
 
     if folder != "":
         if os.path.exists(folder + "/") == False:
@@ -326,27 +340,12 @@ def create_file(file, folder, columns, blankname, rownumber = 0, notification = 
 def menu(notification = ""): # main menu, first thing the user will see
     clear()
 
-    nofilename = False
-    foldername = ""
-    rownumber = 0
-    columnfile = ""
+    filename = settings.filename
+    foldername = settings.foldername
+    rownumber = settings.rownumber
+    columnfile = settings.columnfile
 
-    settings = get_settings()
     get_columns()
-
-    for x in range (0, len(settings)):
-        if settings[x]["key"] == "filename":
-            if settings[x]["value"] == "":
-                nofilename = True
-                filename = "No file name set..."
-            else:
-                filename = settings[x]["value"]
-        elif settings[x]["key"] == "foldername":
-            foldername = settings[x]["value"]
-        elif settings[x]["key"] == "rownumber":
-            rownumber = settings[x]["value"]
-        elif settings[x]["key"] == "columnfile":
-            columnfile = settings[x]["value"]
 
     print("Dummy data generator v" + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\nCurrent column file: " + columnfile + "\n" + notification)
 
@@ -358,11 +357,11 @@ def menu(notification = ""): # main menu, first thing the user will see
     selection = input("\nEnter option: ")
 
     if selection == "1":
-        create_file(filename, foldername, get_columns(), nofilename, rownumber)
+        create_file()
     if selection == "2":
         get_column_data()
     if selection == "3":
-        get_settings_data()
+        view_settings()
     elif selection == "q":
         exit()
     else:
