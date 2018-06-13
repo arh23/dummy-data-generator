@@ -89,7 +89,12 @@ def get_columns(): # gets the settings from the settings json file, if the setti
 
     if os.path.exists(jsonfilename) == False:
         with open(jsonfilename, "w") as jsonfile:
-            data = [{"value": "value 1", "name": "column 1"}, {"value": "value 2", "name": "column 2"}, {"value": "value 3", "name": "column 3"}]
+            data = [
+                {"value": "value 1", "name": "column 1"}, 
+                {"value": "value 2", "name": "column 2"}, 
+                {"value": "value 3", "name": "column 3"}
+            ]
+            
             json.dump(data, jsonfile)
 
     with open(jsonfilename) as jsonfile:
@@ -248,7 +253,24 @@ def get_values(value, rownumber): # reads the value for each column, and process
                     firstrangevalue = ""
                     secondrangevalue = ""
                     secondvalue = False
-                    break           
+                    break
+        elif value[currentindex] == "[":
+            values = []
+            tempstring = ""
+            while True:
+                currentindex = currentindex + 1
+
+                if value[currentindex] == "|":
+                    values.append(tempstring)
+                    tempstring = ""
+                elif value[currentindex] == "]":
+                    values.append(tempstring)
+                    output = values[random.randint(0,len(values) - 1)]
+                    values = []
+                    break
+                else:
+                    tempstring = tempstring + value[currentindex]
+
         elif value[currentindex] == "+":
             output = output + str(rownumber)
         else:
@@ -346,6 +368,6 @@ def menu(notification = ""): # main menu, first thing the user will see
     else:
         menu("\nInvalid option...\n")
 
-version = "0.1.3"
+version = "0.4.0"
 
 menu()
