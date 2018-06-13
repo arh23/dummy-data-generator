@@ -244,6 +244,10 @@ def get_values(value, rownumber): # reads the value for each column, and process
                         output = output + str(valueformat % generatedvalue)
                     else:
                         output = output + str(generatedvalue)
+
+                    firstrangevalue = ""
+                    secondrangevalue = ""
+                    secondvalue = False
                     break           
         elif value[currentindex] == "+":
             output = output + str(rownumber)
@@ -342,6 +346,6 @@ def menu(notification = ""): # main menu, first thing the user will see
     else:
         menu("\nInvalid option...\n")
 
-version = "0.1.2"
+version = "0.1.3"
 
 menu()
