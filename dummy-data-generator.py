@@ -5,21 +5,27 @@ class Settings():
     def __init__(self):
         self.update_values()
 
-    def update_values(self):
+    def update_values(self): # update attribute values
         self.json = self.get_settings()
         self.filename = self.get_setting_value("filename")
         self.foldername = self.get_setting_value("foldername")
+        self.columnfile = self.get_setting_value("columnfile")
+        self.columnfolder = self.get_setting_value("columnfolder")
         self.rownumber = self.get_setting_value("rownumber")
-        self.columnfile = self.get_setting_value("columnfile") 
+        self.min = self.get_setting_value("min")
+        self.max = self.get_setting_value("max")
 
     def get_settings(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
         if os.path.exists('settings.json') == False:
             with open('settings.json', 'w') as jsonfile:
                 settings = [
-                    {"key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
-                    {"key":"foldername", "desc":"Name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
-                    {"key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
-                    {"key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"}
+                    {"section":0, "key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
+                    {"section":0, "key":"foldername", "desc":"Name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
+                    {"section":0, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
+                    {"section":0, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
+                    {"section":1, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
+                    {"section":1, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
+                    {"section":1, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"}
                 ]
                 json.dump(settings, jsonfile)
 
@@ -45,10 +51,17 @@ settings = Settings()
 
 class Columns():
     def get_columns(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
-        jsonfilename = settings.columnfile
 
-        if os.path.exists(jsonfilename) == False:
-            with open(jsonfilename, "w") as jsonfile:
+        self.jsonfilename = settings.columnfile
+
+        if settings.columnfolder != "":
+            if os.path.exists(settings.columnfolder + "/") == False:
+                os.makedirs(settings.columnfolder + "/")
+
+            self.jsonfilename = settings.columnfolder + "/" + settings.columnfile
+
+        if os.path.exists(self.jsonfilename) == False:
+            with open(self.jsonfilename, "w") as jsonfile:
                 data = [
                     {"value": "value 1", "name": "column 1"}, 
                     {"value": "value 2", "name": "column 2"}, 
@@ -57,20 +70,18 @@ class Columns():
 
                 json.dump(data, jsonfile)
 
-        with open(jsonfilename) as jsonfile:
+        with open(self.jsonfilename) as jsonfile:
             data = json.load(jsonfile)
 
         self.json = data
 
     def update_column_data(self): # saves all changes to the column in the columns json file
-        jsonfilename = settings.columnfile
-
-        with open(jsonfilename, "w") as jsonfile:
+        with open(self.jsonfilename, "w") as jsonfile:
             json.dump(self.json, jsonfile)
 
         self.get_columns()
 
-    def get_columns_total(self):
+    def get_columns_total(self): # returns number of different columns in the column json data
         return len(self.json)
 
 columns = Columns()
@@ -82,14 +93,23 @@ def clear(platformname = sys.platform): # clear the terminal buffer ~ NOTE: this
         os.system("clear")
 
 def view_settings(notification = ""): # displays the settings in the terminal, and allows the user to select settings
+    settings.update_values()
+
     option = ""
     while option != "q":
         clear()
 
         print(notification + "The following settings alter how the test data is generated:\n")
 
-        for y in range (1, len(settings.json) + 1):
-            print("---- No." + str(y) + " ----\n" + settings.json[y - 1]["desc"] + ": \n" + settings.json[y - 1]["value"])
+        print("File and folder options -\n")
+        for y in range (0, len(settings.json)):
+            if settings.json[y]["section"] == 0:
+                print(str(y + 1) + ". " + settings.json[y]["desc"] + ": \n   " + settings.json[y]["value"])
+
+        print("\nData generation options -\n")
+        for y in range (0, len(settings.json)):
+            if settings.json[y]["section"] == 1:
+                print(str(y + 1) + ". " + settings.json[y]["desc"] + ": \n   " + settings.json[y]["value"])
 
         option = input("\nEnter the setting number (1 to " + str(len(settings.json)) + ") to edit the setting, or:\nq. Quit\nOption:")
 
@@ -223,29 +243,37 @@ def get_values(value, rownumber): # reads the value for each column, and process
                 currentindex = currentindex + 1
                 if value[currentindex].isdigit() == True and secondvalue == False:
                     firstrangevalue = firstrangevalue + value[currentindex]
+
                 elif value[currentindex].isdigit() == True and secondvalue == True:
                     secondrangevalue = secondrangevalue + value[currentindex]
+
                 elif value[currentindex] == ",":
                     secondvalue = True
+
                 elif value[currentindex] == ".":
                     isdecimal = True
                     if secondvalue == False:
                         firstrangevalue = firstrangevalue + "."
                     else:
                         secondrangevalue = secondrangevalue + "."
+
                 elif value[currentindex] == "-":
                     isdecimal = True
                     if secondvalue == False:
                         firstrangevalue = firstrangevalue + "-"
                     else:
                         secondrangevalue = secondrangevalue + "-"
+
                 elif value[currentindex] == "£":
                     valueformat = "%.2f"
+
                 elif value[currentindex] == "*":
                     valueformat = ""
+
                 elif value[currentindex] == "%" and secondvalue == False:
                     valueformat = "%." + firstrangevalue + "f"
                     firstrangevalue = ""
+
                 elif value[currentindex] == ")":
                     generatedvalue = ""
 
@@ -263,6 +291,7 @@ def get_values(value, rownumber): # reads the value for each column, and process
                     secondrangevalue = ""
                     secondvalue = False
                     break
+
         elif value[currentindex] == "[":
             values = []
             tempstring = ""
@@ -272,16 +301,20 @@ def get_values(value, rownumber): # reads the value for each column, and process
                 if value[currentindex] == "|":
                     values.append(tempstring)
                     tempstring = ""
+
                 elif value[currentindex] == "]":
                     values.append(tempstring)
                     output = values[random.randint(0,len(values) - 1)]
                     values = []
                     break
+                    
                 else:
                     tempstring = tempstring + value[currentindex]
 
         elif value[currentindex] == "+":
             output = output + str(rownumber)
+        elif value[currentindex] == "?":
+            output = output + str(random.randint(int(settings.min), int(settings.max)))
         else:
             output = output + value[currentindex]
         currentindex = currentindex + 1
@@ -339,10 +372,14 @@ def create_file(notification = ""): # creates and writes the file
 def menu(notification = ""): # main menu, first thing the user will see
     clear()
 
-    filename = settings.filename
-    foldername = settings.foldername
-    rownumber = settings.rownumber
+    filename = settings.filename 
     columnfile = settings.columnfile
+
+    if (settings.foldername != ""):
+        filename = settings.foldername + "/" + settings.filename 
+
+    if (settings.columnfolder != ""):
+        columnfile = settings.columnfolder + "/" + settings.columnfile
 
     columns.get_columns()
 
