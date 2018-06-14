@@ -43,6 +43,38 @@ class Settings():
 
 settings = Settings()
 
+class Columns():
+    def get_columns(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
+        jsonfilename = settings.columnfile
+
+        if os.path.exists(jsonfilename) == False:
+            with open(jsonfilename, "w") as jsonfile:
+                data = [
+                    {"value": "value 1", "name": "column 1"}, 
+                    {"value": "value 2", "name": "column 2"}, 
+                    {"value": "value 3", "name": "column 3"}
+                ]
+
+                json.dump(data, jsonfile)
+
+        with open(jsonfilename) as jsonfile:
+            data = json.load(jsonfile)
+
+        self.json = data
+
+    def update_column_data(self): # saves all changes to the column in the columns json file
+        jsonfilename = settings.columnfile
+
+        with open(jsonfilename, "w") as jsonfile:
+            json.dump(self.json, jsonfile)
+
+        self.get_columns()
+
+    def get_columns_total(self):
+        return len(self.json)
+
+columns = Columns()
+
 def clear(platformname = sys.platform): # clear the terminal buffer ~ NOTE: this seems to be quite buggy, need to come back to this
     if platformname == "win32":
         os.system("cls")
@@ -56,25 +88,22 @@ def view_settings(notification = ""): # displays the settings in the terminal, a
 
         print(notification + "The following settings alter how the test data is generated:\n")
 
-        count = 0
-
         for y in range (1, len(settings.json) + 1):
             print("---- No." + str(y) + " ----\n" + settings.json[y - 1]["desc"] + ": \n" + settings.json[y - 1]["value"])
-            count = y
 
         option = input("\nEnter the setting number (1 to " + str(len(settings.json)) + ") to edit the setting, or:\nq. Quit\nOption:")
 
         if option == "q":
             menu()
         elif option.isdigit():
-            if int(option) <= count:
-                get_one_setting(int(option))
-            elif int(option) > count:
+            if int(option) <= len(settings.json):
+                view_one_setting(int(option))
+            elif int(option) > len(settings.json):
                 view_settings("No setting with the number " + option + "...\n")
         else:
             view_settings("No setting with the number " + option + "...\n")
 
-def get_one_setting(index): # displays a selected setting in the terminal and provides the user with more options for the particular setting
+def view_one_setting(index): # displays a selected setting in the terminal and provides the user with more options for the particular setting
     option = ""
     notification = ""
 
@@ -98,79 +127,49 @@ def get_one_setting(index): # displays a selected setting in the terminal and pr
         else:
             notification = "\nInvalid option...\n"
 
-def get_columns(): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
-    jsonfilename = settings.columnfile
-
-    if os.path.exists(jsonfilename) == False:
-        with open(jsonfilename, "w") as jsonfile:
-            data = [
-                {"value": "value 1", "name": "column 1"}, 
-                {"value": "value 2", "name": "column 2"}, 
-                {"value": "value 3", "name": "column 3"}
-            ]
-
-            json.dump(data, jsonfile)
-
-    with open(jsonfilename) as jsonfile:
-        data = json.load(jsonfile)
-    '''
-    for y in range (0, len(data)): # dealing with encoding issues, but this does not address the issue properly
-        data[y]["name"] = data[y]["name"].replace("Â", "")
-        data[y]["value"] = data[y]["value"].replace("Â", "")
-    '''
-    return data
-
-def get_column_data(notification = ""): # displays the columns in the terminal, and allows the user to select columns
+def view_columns(notification = ""): # displays the columns in the terminal, and allows the user to select columns
     option = ""
     while option != "q":
-        data = get_columns()
-
         clear()
 
         print(notification + "The following columns and values are currently defined:\n")
 
         count = 0
 
-        for y in range (1, len(data) + 1):
-            print(str(y) + ". " + data[y - 1]["name"] + " - " + data[y - 1]["value"])
+        for y in range (1, columns.get_columns_total() + 1):
+            print(str(y) + ". " + columns.json[y - 1]["name"] + " - " + columns.json[y - 1]["value"])
             count = y
 
-        option = input("\nEnter a column number (1 to " + str(len(data)) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\nOption:")
+        option = input("\nEnter a column number (1 to " + str(columns.get_columns_total()) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\nOption:")
 
         if option == "q":
             menu()
         elif option.isdigit():
             if int(option) <= count:
-                get_one_column(data, int(option))
+                view_one_column(int(option))
             elif int(option) > count:
-                get_column_data("No column " + option + "...\n")
+                notification = "No column " + option + "...\n"
         elif option == "+":
-            add_column()
-            get_column_data("New column " + str(int(len(data) + 1)) + " added!\n\n")
+            columns.json.append({"name":input("Enter the name of the new column: "), "value":input("Enter the value of the new column: ")})
+
+            columns.update_column_data()
+
+            notification = "New column " + str(int(columns.get_columns_total())) + " added!\n\n"
         elif option == "x":
-            delete_column(int(input("Enter the column number you want to delete: ")) - 1)
-            notification = "Column deleted!\n\n"
+            index = int(input("Enter the column number you want to delete: ")) - 1
+            confirm = input("Are you sure you want to delete column " + str(index + 1) + "? y/n\n")
+
+            if confirm == "y":
+                columns.json.pop(index)
+                columns.update_column_data()
+
+                notification = "Column deleted!\n\n"
+            else:
+                notification = "Column NOT deleted!\n\n"
         else:
-            get_column_data("No column " + option + "...\n")
+            notification = "No column " + option + "...\n"
 
-def add_column(): # adds a column to the column data list and updates the file
-    data = get_columns()
-    index = len(data)
-
-    data.append({"name":input("Enter the name of the new column: "), "value":input("Enter the value of the new column: ")})
-
-    update_column_data(data)
-
-def delete_column(index): # deletes a column from the column data list and updates the file
-    data = get_columns()
-
-    confirm = input("Are you sure you want to delete column " + str(index + 1) + "? y/n\n")
-
-    if confirm == "y":
-        data.pop(index)
-        update_column_data(data)
-
-def get_one_column(data, index): # displays a selected column in the terminal and provides the user with more options for the particular column
+def view_one_column(index): # displays a selected column in the terminal and provides the user with more options for the particular column
     option = ""
     notification = ""
 
@@ -178,34 +177,35 @@ def get_one_column(data, index): # displays a selected column in the terminal an
         clear()
 
         print("The column name and value for column number " + str(index) + ": \n")
-        print("----------\nColumn name: " + data[index - 1]["name"])
-        print("Column value: " + data[index - 1]["value"] + "\n----------")
+        print("----------\nColumn name: " + columns.json[index - 1]["name"])
+        print("Column value: " + columns.json[index - 1]["value"] + "\n----------")
 
         option = input(notification + "\n1. Edit column name\n2. Edit column value\nx. Delete column\nb. Go back\nq. Quit\nOption:")
 
         if option == "q":
             menu()
         elif option == "b":
-            get_column_data()
+            view_columns()
         elif option == "1":
-            data[index - 1]["name"] = input("Enter new column name:")
-            update_column_data(data)
-            get_column_data("Column name for column " + str(index) + " updated!\n\n")
+            columns.json[index - 1]["name"] = input("Enter new column name:")
+            columns.update_column_data()
+            view_columns("Column name for column " + str(index) + " updated!\n\n")
         elif option == "2":
-            data[index - 1]["value"] = input("Enter new column value:")
-            update_column_data(data)
-            get_column_data("Column value for column " + str(index) + " updated!\n\n")
+            columns.json[index - 1]["value"] = input("Enter new column value:")
+            columns.update_column_data()
+            view_columns("Column value for column " + str(index) + " updated!\n\n")
         elif option == "x":
-            delete_column(index - 1)
-            get_column_data("Column " + str(index) + " deleted!\n\n")
+            confirm = input("Are you sure you want to delete column " + str(index) + "? y/n\n")
+
+            if confirm == "y":
+                columns.json.pop(index)
+                columns.update_column_data()
+
+                view_columns("Column " + str(index) + " deleted!\n\n")
+            else:
+                view_columns("Column " + str(index) + " NOT deleted!\n\n")
         else:
             notification = "\nInvalid option...\n"
-
-def update_column_data(data): # saves all changes to the column in the columns json file
-    jsonfilename = settings.columnfile
-
-    with open(jsonfilename, "w") as jsonfile:
-        json.dump(data, jsonfile)
 
 def get_values(value, rownumber): # reads the value for each column, and processes it into dummy data to add to the csv
     currentindex = 0
@@ -292,7 +292,6 @@ def create_file(notification = ""): # creates and writes the file
 
     file = settings.filename
     folder = settings.foldername
-    columns = get_columns()
     rownumber = settings.rownumber
 
     if file == "":
@@ -320,16 +319,16 @@ def create_file(notification = ""): # creates and writes the file
         
         headers = []
 
-        for y in range (0, len(columns)):
-            headers.append(columns[y]["name"])
+        for y in range (0, columns.get_columns_total()):
+            headers.append(columns.json[y]["name"])
 
         writer.writerows([headers])
 
         values = []
 
         for z in range (1, int(rows) + 1):
-            for x in range (0, len(columns)):
-                values.append(get_values(columns[x]["value"], int(rownumber) + z))
+            for x in range (0, columns.get_columns_total()):
+                values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
 
             writer.writerows([values])
 
@@ -345,7 +344,7 @@ def menu(notification = ""): # main menu, first thing the user will see
     rownumber = settings.rownumber
     columnfile = settings.columnfile
 
-    get_columns()
+    columns.get_columns()
 
     print("Dummy data generator v" + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\nCurrent column file: " + columnfile + "\n" + notification)
 
@@ -359,7 +358,7 @@ def menu(notification = ""): # main menu, first thing the user will see
     if selection == "1":
         create_file()
     if selection == "2":
-        get_column_data()
+        view_columns()
     if selection == "3":
         view_settings()
     elif selection == "q":
