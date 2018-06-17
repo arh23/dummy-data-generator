@@ -20,7 +20,7 @@ class Settings():
             with open('settings.json', 'w') as jsonfile:
                 settings = [
                     {"section":0, "key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
-                    {"section":0, "key":"foldername", "desc":"Name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
+                    {"section":0, "key":"foldername", "desc":"The name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
                     {"section":0, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
                     {"section":0, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
                     {"section":1, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
