@@ -18,6 +18,8 @@ The columns can be modified through the script or via a text editor. You can use
 
 - *test value +* - this will generate with an incremental count, represented by the plus sign, so the first row will be *test value 1* and row twenty will be *test value 20*.
 
+- *test value ?* - this will generate with a random value, represented by the question mark, an example row would be *test value 374*. The ranged used to generate the random value can be changed via the settings.
+
 - *test value (50,100)* - this will generate with a random number, where the range of this random number is set in the brackets, so a row may generate as *test value 63*. There are also some different behaviours with number ranges:
     - *(\*0.01,0.99)* - this will generate a random decimal with unlimited decimal places between 0.01 and 0.99 for each row.
     - *(£10,1000)* - this will generate a random number between 10 and 1000 with two decimal places, for example, 278.56.
@@ -34,9 +36,13 @@ A settings file (*settings.json*) is also created when the script has been run f
 
 - Name of folder where generated files are located - set to "generated-data" by default. If left blank, the files will generate in the same location as the script.
 
+- Name of the JSON file being used to load the columns - set to "columns.json" by default. If the file does not exist, it will be created with default columns.
+
+- Name of the folder where the columns are stored - set to "columns" by default. If left blank, the script will create and/or use the columns file in the same location as the script.
+
 - Index value where the script starts counting from when creating rows - set to 0 by default. The value is not inclusive, counts will start at value + 1.
 
-- Name of the JSON file being used to load the columns - set to "columns.json" by default. If the file does not exist, it will be created with default columns.
+- The minimum and maximum values generated when using the '?' placeholder for the column value - default minimum is 1 and default maximum is 1,000,000.
 
 You can modify the settings from within the script, or directly via the JSON file.
 
