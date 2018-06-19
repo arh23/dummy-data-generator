@@ -1,5 +1,5 @@
 #! coding: utf-8
-import csv, random, time, json, os, sys, platform
+import csv, random, time, json, os, sys, platform, datetime
 
 class Settings():
     def __init__(self):
@@ -104,14 +104,14 @@ def view_settings(notification = ""): # displays the settings in the terminal, a
         print("File and folder options -\n")
         for y in range (0, len(settings.json)):
             if settings.json[y]["section"] == 0:
-                print(str(y + 1) + ". " + settings.json[y]["desc"] + ": \n   " + settings.json[y]["value"])
+                print(str(y + 1) + ". " + settings.json[y]["desc"] + ": \n   " + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
 
         print("\nData generation options -\n")
         for y in range (0, len(settings.json)):
             if settings.json[y]["section"] == 1:
-                print(str(y + 1) + ". " + settings.json[y]["desc"] + ": \n   " + settings.json[y]["value"])
+                print(str(y + 1) + ". " + settings.json[y]["desc"] + ": \n   " + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
 
-        option = input("\nEnter the setting number (1 to " + str(len(settings.json)) + ") to edit the setting, or:\nq. Quit\nOption:")
+        option = input("\nEnter the setting number (1 to " + str(len(settings.json)) + ") to edit the setting, or:\nq. Quit\n\nOption:")
 
         if option == "q":
             menu()
@@ -132,16 +132,16 @@ def view_one_setting(index): # displays a selected setting in the terminal and p
 
         print("Setting number " + str(index) + ": \n")
         print("----------\nDescription: " + settings.json[index - 1]["desc"])
-        print("Value: " + settings.json[index - 1]["value"] + "\n----------")
+        print("Value: " + (settings.json[index - 1]["value"] if settings.json[index - 1]["value"] != "" else "<no value>") + "\n----------")
 
-        option = input(notification + "\n1. Edit setting value\nb. Go back\nq. Quit\nOption:")
+        option = input(notification + "\n1. Edit setting value\nb. Go back\nq. Quit\n\nOption:")
 
         if option == "q":
             menu()
         elif option == "b":
             view_settings()
         elif option == "1":
-            settings.json[index - 1]["value"] = input("Enter new setting value:")
+            settings.json[index - 1]["value"] = input("\nEnter new setting value:")
             settings.update_settings()
             view_settings("Value for setting " + str(index) + " updated!\n\n")
         else:
@@ -160,7 +160,7 @@ def view_columns(notification = ""): # displays the columns in the terminal, and
             print(str(y) + ". " + columns.json[y - 1]["name"] + " - " + columns.json[y - 1]["value"])
             count = y
 
-        option = input("\nEnter a column number (1 to " + str(columns.get_columns_total()) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\nOption:")
+        option = input("\nEnter a column number (1 to " + str(columns.get_columns_total()) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\n\nOption:")
 
         if option == "q":
             menu()
@@ -170,13 +170,13 @@ def view_columns(notification = ""): # displays the columns in the terminal, and
             elif int(option) > count:
                 notification = "No column " + option + "...\n"
         elif option == "+":
-            columns.json.append({"name":input("Enter the name of the new column: "), "value":input("Enter the value of the new column: ")})
+            columns.json.append({"name":input("\nEnter the name of the new column: "), "value":input("Enter the value of the new column: ")})
 
             columns.update_column_data()
 
             notification = "New column " + str(int(columns.get_columns_total())) + " added!\n\n"
         elif option == "x":
-            index = int(input("Enter the column number you want to delete: ")) - 1
+            index = int(input("\nEnter the column number you want to delete: ")) - 1
             confirm = input("Are you sure you want to delete column " + str(index + 1) + "? y/n\n")
 
             if confirm == "y":
@@ -200,22 +200,23 @@ def view_one_column(index): # displays a selected column in the terminal and pro
         print("----------\nColumn name: " + columns.json[index - 1]["name"])
         print("Column value: " + columns.json[index - 1]["value"] + "\n----------")
 
-        option = input(notification + "\n1. Edit column name\n2. Edit column value\nx. Delete column\nb. Go back\nq. Quit\nOption:")
+        option = input(notification + "\n1. Edit column name\n2. Edit column value\nx. Delete column\nb. Go back\nq. Quit\n\nOption:")
 
         if option == "q":
             menu()
         elif option == "b":
             view_columns()
         elif option == "1":
-            columns.json[index - 1]["name"] = input("Enter new column name:")
+            columns.json[index - 1]["name"] = input("\nEnter new column name:")
             columns.update_column_data()
             view_columns("Column name for column " + str(index) + " updated!\n\n")
         elif option == "2":
+            print("\nView the documentation for the possible column values and placeholders that can be used.\n")
             columns.json[index - 1]["value"] = input("Enter new column value:")
             columns.update_column_data()
             view_columns("Column value for column " + str(index) + " updated!\n\n")
         elif option == "x":
-            confirm = input("Are you sure you want to delete column " + str(index) + "? y/n\n")
+            confirm = input("\nAre you sure you want to delete column " + str(index) + "? y/n\n")
 
             if confirm == "y":
                 columns.json.pop(index)
@@ -226,6 +227,49 @@ def view_one_column(index): # displays a selected column in the terminal and pro
                 view_columns("Column " + str(index) + " NOT deleted!\n\n")
         else:
             notification = "\nInvalid option...\n"
+
+def get_filename():
+    currentindex = 0
+    filename = ""
+    file = settings.filename
+
+    if file == "":
+        file = input("Enter a name for the file (do not include .csv): ") + ".csv"
+
+    now = datetime.datetime.now()
+
+    while currentindex < len(file):
+        if file[currentindex] == "{":
+            while True:
+                currentindex = currentindex + 1
+                
+                if file[currentindex] == "h":
+                    filename = filename + str(now.hour)
+                elif file[currentindex] == "m":
+                    filename = filename + str(now.minute)
+                elif file[currentindex] == "s":
+                    filename = filename + str(now.second)
+                elif file[currentindex] == "d":
+                    filename = filename + str(now.day)
+                elif file[currentindex] == "M":
+                    filename = filename + str(now.month)
+                elif file[currentindex] == "y":
+                    filename = filename + str(now.year)
+                elif file[currentindex] == "?":
+                    filename = filename + str(random.randint(int(settings.min), int(settings.max)))
+                elif file[currentindex] == "}":
+                    break
+                else:
+                    filename = filename + file[currentindex]
+        else:
+            filename = filename + file[currentindex]
+
+        currentindex = currentindex + 1
+
+    if (settings.foldername != ""):
+        filename = settings.foldername + "/" + filename
+
+    return filename
 
 def get_values(value, rownumber): # reads the value for each column, and processes it into dummy data to add to the csv
     currentindex = 0
@@ -323,12 +367,9 @@ def get_values(value, rownumber): # reads the value for each column, and process
 def create_file(notification = ""): # creates and writes the file
     clear()
 
-    file = settings.filename
+    file = get_filename()
     folder = settings.foldername
     rownumber = settings.rownumber
-
-    if file == "":
-        file = input("Enter a name for the file (do not include .csv): ") + ".csv"
 
     rows = input(notification + "Enter the number of rows to generate (or enter 'q' or 'b' to go back to the menu): ")
 
@@ -341,7 +382,7 @@ def create_file(notification = ""): # creates and writes the file
         if os.path.exists(folder + "/") == False:
             os.makedirs(folder + "/")
 
-        file = folder + "/" + file
+        #file = folder + "/" + file
 
     print("\nCreating file...")
 
@@ -403,6 +444,6 @@ def menu(notification = ""): # main menu, first thing the user will see
     else:
         menu("\nInvalid option...\n")
 
-version = "0.4.0"
+version = "0.5.0"
 
 menu()
