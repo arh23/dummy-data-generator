@@ -67,7 +67,6 @@ class Columns():
                     {"value": "value 2", "name": "column 2"}, 
                     {"value": "value 3", "name": "column 3"}
                 ]
-
                 json.dump(data, jsonfile)
 
         with open(self.jsonfilename) as jsonfile:
@@ -101,12 +100,12 @@ def view_settings(notification = ""): # displays the settings in the terminal, a
 
         print(notification + "The following settings alter how the test data is generated:\n")
 
-        print("File and folder options -\n")
+        print("File and folder settings -\n")
         for y in range (0, len(settings.json)):
             if settings.json[y]["section"] == 0:
                 print(str(y + 1) + ". " + settings.json[y]["desc"] + ": \n   " + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
 
-        print("\nData generation options -\n")
+        print("\nData generation settings -\n")
         for y in range (0, len(settings.json)):
             if settings.json[y]["section"] == 1:
                 print(str(y + 1) + ". " + settings.json[y]["desc"] + ": \n   " + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
@@ -244,17 +243,21 @@ def get_filename():
                 currentindex = currentindex + 1
                 
                 if file[currentindex] == "h":
-                    filename = filename + str(now.hour)
+                    filename = filename + str('%02d' % now.hour)
                 elif file[currentindex] == "m":
-                    filename = filename + str(now.minute)
+                    filename = filename + str('%02d' % now.minute)
                 elif file[currentindex] == "s":
-                    filename = filename + str(now.second)
+                    filename = filename + str('%02d' % now.second)
                 elif file[currentindex] == "d":
-                    filename = filename + str(now.day)
+                    filename = filename + str('%02d' % now.day)
                 elif file[currentindex] == "M":
-                    filename = filename + str(now.month)
+                    filename = filename + str('%02d' % now.month)
                 elif file[currentindex] == "y":
                     filename = filename + str(now.year)
+                elif file[currentindex] == "D":
+                    filename = filename + str('%02d' % now.day) + "-" + str('%02d' % now.month) + "-" + str(now.year)
+                elif file[currentindex] == "T":
+                    filename = filename + str('%02d' % now.hour) + ":" + str('%02d' % now.minute) + ":" + str('%02d' % now.second)
                 elif file[currentindex] == "?":
                     filename = filename + str(random.randint(int(settings.min), int(settings.max)))
                 elif file[currentindex] == "}":
@@ -431,15 +434,15 @@ def menu(notification = ""): # main menu, first thing the user will see
     print("3. Settings")
     print("q. Quit")
 
-    selection = input("\nEnter option: ")
+    option = input("\nEnter option: ")
 
-    if selection == "1":
+    if option == "1":
         create_file()
-    if selection == "2":
+    if option == "2":
         view_columns()
-    if selection == "3":
+    if option == "3":
         view_settings()
-    elif selection == "q":
+    elif option == "q":
         exit()
     else:
         menu("\nInvalid option...\n")
