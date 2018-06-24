@@ -1,5 +1,5 @@
 #! coding: utf-8
-import csv, random, time, json, os, sys, platform, datetime
+import csv, random, time, json, os, sys, platform, datetime, gzip, shutil
 
 class Settings():
     def __init__(self):
@@ -11,6 +11,8 @@ class Settings():
         self.foldername = self.get_setting_value("foldername")
         self.columnfile = self.get_setting_value("columnfile")
         self.columnfolder = self.get_setting_value("columnfolder")
+        self.compress = self.get_setting_value("compress")
+        self.numberofrows = self.get_setting_value("numberofrows")
         self.rownumber = self.get_setting_value("rownumber")
         self.min = self.get_setting_value("min")
         self.max = self.get_setting_value("max")
@@ -23,6 +25,8 @@ class Settings():
                     {"section":0, "key":"foldername", "desc":"The name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
                     {"section":0, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
                     {"section":0, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
+                    {"section":0, "key":"compress", "desc":"Toggle to compress the file after generation (compresses to .gz) y/n", "value":"n"},
+                    {"section":1, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
                     {"section":1, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
                     {"section":1, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
                     {"section":1, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"}
@@ -257,9 +261,11 @@ def get_filename():
                 elif file[currentindex] == "D":
                     filename = filename + str('%02d' % now.day) + "-" + str('%02d' % now.month) + "-" + str(now.year)
                 elif file[currentindex] == "T":
-                    filename = filename + str('%02d' % now.hour) + ":" + str('%02d' % now.minute) + ":" + str('%02d' % now.second)
+                    filename = filename + str('%02d' % now.hour) + "-" + str('%02d' % now.minute) + "-" + str('%02d' % now.second)
                 elif file[currentindex] == "?":
                     filename = filename + str(random.randint(int(settings.min), int(settings.max)))
+                elif file[currentindex] == "#":
+                    filename = filename + str(settings.numberofrows)
                 elif file[currentindex] == "}":
                     break
                 else:
@@ -369,12 +375,14 @@ def get_values(value, rownumber): # reads the value for each column, and process
 
 def create_file(notification = ""): # creates and writes the file
     clear()
+    
+    if settings.numberofrows == "":
+        settings.numberofrows = input(notification + "Enter the number of rows to generate (or enter 'q' or 'b' to go back to the menu): ")
 
+    rows = settings.numberofrows
     file = get_filename()
     folder = settings.foldername
     rownumber = settings.rownumber
-
-    rows = input(notification + "Enter the number of rows to generate (or enter 'q' or 'b' to go back to the menu): ")
 
     if rows == "q" or rows == "b":
         menu()
@@ -385,14 +393,12 @@ def create_file(notification = ""): # creates and writes the file
         if os.path.exists(folder + "/") == False:
             os.makedirs(folder + "/")
 
-        #file = folder + "/" + file
-
     print("\nCreating file...")
 
     starttime = time.time()
 
-    with open(file, 'w') as myfile:
-        writer = csv.writer(myfile, delimiter=',', lineterminator='\n', quoting=csv.QUOTE_ALL)
+    with open(file, 'w') as currentfile:
+        writer = csv.writer(currentfile, delimiter=',', lineterminator='\n', quoting=csv.QUOTE_ALL)
         
         headers = []
 
@@ -411,7 +417,20 @@ def create_file(notification = ""): # creates and writes the file
 
             values = []
 
-    menu("\nTook %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows in '" + file + "'...\n")         
+
+    if settings.compress == "y":
+        print("\nCompressing generated file...")
+
+        with open(file, 'rb') as currentfile:
+            with gzip.open(file + '.gz', 'wb') as compressedfile:
+                shutil.copyfileobj(currentfile, compressedfile)
+
+        os.remove(file)
+
+        menu("\nTook %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".gz'...\n")
+    else:
+        menu("\nTook %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows in '" + file + "'...\n")
+             
 
 def menu(notification = ""): # main menu, first thing the user will see
     clear()
