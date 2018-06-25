@@ -12,7 +12,11 @@ This documentation will guide you through the different operators and functional
 
 *Dummy data generator* generates multiple rows of test/fake data in a csv file based on a defined template. These values (specifically grouped as *columns*) can be found in the *columns.json* file created after the script has been run for the first time. 
 
-The columns can be modified through the script or via a text editor. You can use various placeholders to generate random or incremental data, for example, see the following column values:
+The columns can be modified through the script or via a text editor. 
+
+##### Column values
+
+You can use various placeholders to generate random or incremental data, for example, see the following column values:
 
 - *example string* - this will generate as fixed text in each row.
 
@@ -28,6 +32,32 @@ The columns can be modified through the script or via a text editor. You can use
 
 Columns can also be added and deleted via the script.
 
+#### File
+
+The user is able to specify the file name, and can opt to have the file compressed after generation.
+
+##### File name
+
+Generated file names can be fixed text, or can use the following values (within curly brackets):
+
+- Individual time values - *h*, *m*, *s* - hour, minute, second respectively.
+
+- Individual date values - *d*, *M*, *y* - day, month, year respectively.
+
+- Whole time value - *T* - formatted as *hour-minute-second*.
+
+- Whole date value - *D* - formated as *day-month-year*.
+
+- Random value - *?* - uses the min and max values set in the settings.
+
+- Number of rows - *#* - uses the number of rows specified in the settings or by the user at time of generation.
+
+Time values are generated as the file name is created (so, at the begining of generation).
+
+##### File compression
+
+Files can be generated and compressed. This must be enabled in the settings. At this time, the script will only compress to *.gz*. The file is deleted after compression, leaving only the compressed file.
+
 #### Settings
 
 A settings file (*settings.json*) is also created when the script has been run for the first time. Currently, the following can be changed via the settings:
@@ -39,6 +69,10 @@ A settings file (*settings.json*) is also created when the script has been run f
 - Name of the JSON file being used to load the columns - set to "columns.json" by default. If the file does not exist, it will be created with default columns.
 
 - Name of the folder where the columns are stored - set to "columns" by default. If left blank, the script will create and/or use the columns file in the same location as the script.
+
+- Whether the script will compress the file after generation - set to "n" by default. Compressed to *.gz* only at this time.
+
+- The number of rows to generate - this value is unset by default. The script will ask the user to input the desired number of rows before generation per generation, if unset.
 
 - Index value where the script starts counting from when creating rows - set to 0 by default. The value is not inclusive, counts will start at value + 1.
 
