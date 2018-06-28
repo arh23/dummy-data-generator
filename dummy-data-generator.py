@@ -55,7 +55,6 @@ settings = Settings()
 
 class Columns():
     def get_columns(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
-
         self.jsonfilename = settings.columnfile
 
         if settings.columnfolder != "":
@@ -88,6 +87,28 @@ class Columns():
         return len(self.json)
 
 columns = Columns()
+
+class ValueList():
+    def __init__(self):
+        self.listindex = -1
+
+    def set_list(self, listvalue): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
+        self.list = listvalue
+        self.listlength = len(listvalue)
+
+    def get_next_list_value(self):
+        self.listindex = self.listindex + 1
+
+        if self.listindex < self.listlength:
+            return self.list[self.listindex]
+        else:
+            self.listindex = -1
+            return self.get_next_list_value()
+
+    def get_random_list_value(self):
+        return self.list[random.randint(0, self.listlength - 1)]
+
+valuelist = ValueList()
 
 def clear(platformname = sys.platform): # clear the terminal buffer ~ NOTE: this seems to be quite buggy, need to come back to this
     if platformname == "win32":
@@ -275,7 +296,7 @@ def get_filename():
 
         currentindex = currentindex + 1
 
-    if (settings.foldername != ""):
+    if settings.foldername != "":
         filename = settings.foldername + "/" + filename
 
     return filename
@@ -348,17 +369,33 @@ def get_values(value, rownumber): # reads the value for each column, and process
         elif value[currentindex] == "[":
             values = []
             tempstring = ""
+            randomlist = False
+            orderedlist = False
+
             while True:
                 currentindex = currentindex + 1
 
-                if value[currentindex] == "|":
+                if value[currentindex] == "|" or value[currentindex] == ",":
                     values.append(tempstring)
                     tempstring = ""
 
+                    if value[currentindex] == "|":
+                        randomlist = True
+                        orderedlist = False
+                    elif value[currentindex] == ",":
+                        randomlist = False
+                        orderedlist = True                        
+
                 elif value[currentindex] == "]":
                     values.append(tempstring)
-                    output = values[random.randint(0,len(values) - 1)]
+                    valuelist.set_list(values)
                     values = []
+
+                    if randomlist:
+                        output = valuelist.get_random_list_value()
+                    elif orderedlist:
+                        output = valuelist.get_next_list_value()
+
                     break
                     
                 else:
@@ -393,7 +430,7 @@ def create_file(notification = ""): # creates and writes the file
         if os.path.exists(folder + "/") == False:
             os.makedirs(folder + "/")
 
-    print("\nCreating file...")
+    print("Creating file...")
 
     starttime = time.time()
 
@@ -466,6 +503,6 @@ def menu(notification = ""): # main menu, first thing the user will see
     else:
         menu("\nInvalid option...\n")
 
-version = "0.5.0"
+version = "0.6.0"
 
 menu()
