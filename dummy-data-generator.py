@@ -492,12 +492,12 @@ def create_file(notification = ""): # creates and writes the file
         writer.writerows([headers])
 
         values = []
+        logger.add_log_entry("Generating values from: " + str(columns.json))
 
         for z in range (1, int(rows) + 1):
             for x in range (0, columns.get_columns_total()):
                 values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
 
-            logger.add_log_entry("Writing values: " + str([values]))
             writer.writerows([values])
 
             values = []
@@ -538,7 +538,7 @@ def menu(notification = ""): # main menu, first thing the user will see
     columns.get_columns()
     valuelist.reset_index()
 
-    print("Dummy data generator v" + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\nCurrent column file: " + columnfile + "\n" + notification)
+    print("Dummy data generator v" + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\nCurrent column file: " + columnfile + "\n" + ("Logging enabled\n" if settings.log == "y" else "") + notification)
 
     print("1. Generate file")
     print("2. Add and edit columns")
