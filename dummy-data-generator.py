@@ -1,6 +1,41 @@
 #! coding: utf-8
 import csv, random, time, json, os, sys, platform, datetime, gzip, shutil
 
+class Logger():
+    def __init__(self):
+        self.log = []
+        self.enabled = False
+
+    def toggle_logger(self, value, message):
+        if value == "y":
+            self.enabled = True
+            if message != "":
+                self.add_log_entry(message, True)
+        else:
+            self.enabled = False
+
+    def add_log_entry(self, value, write = False):
+        now = datetime.datetime.now()
+        if self.enabled:
+            self.log.append("[" + str('%02d' % now.hour) + ":" + str('%02d' % now.minute) + ":" + str('%02d' % now.second) + "] " + value)
+            if write == True:
+                self.write_log()
+
+    def write_log(self):
+        now = datetime.datetime.now()
+        logname = "logs/log-" + str('%02d' % now.day) + "-" + str('%02d' % now.month) + "-" + str('%02d' % now.year) + ".txt"
+
+        if os.path.exists("logs/") == False:
+            os.makedirs("logs/")
+
+        with open(logname, 'a') as logfile:
+            for x in range (0, len(self.log)):
+                logfile.write(self.log[x] + "\n")
+
+        self.log = []
+
+logger = Logger()
+
 class Settings():
     def __init__(self):
         self.update_values()
@@ -16,6 +51,7 @@ class Settings():
         self.rownumber = self.get_setting_value("rownumber")
         self.min = self.get_setting_value("min")
         self.max = self.get_setting_value("max")
+        self.log = self.get_setting_value("logging")
 
     def get_settings(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
         if os.path.exists('settings.json') == False:
@@ -29,7 +65,8 @@ class Settings():
                     {"section":1, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
                     {"section":1, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
                     {"section":1, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
-                    {"section":1, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"}
+                    {"section":1, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"},
+                    {"section":2, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n"}
                 ]
                 json.dump(settings, jsonfile)
 
@@ -131,12 +168,17 @@ def view_settings(notification = ""): # displays the settings in the terminal, a
         print("File and folder settings -\n")
         for y in range (0, len(settings.json)):
             if settings.json[y]["section"] == 0:
-                print(str(y + 1) + ". " + settings.json[y]["desc"] + ": \n   " + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
+                print(str(y + 1) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
 
         print("\nData generation settings -\n")
         for y in range (0, len(settings.json)):
             if settings.json[y]["section"] == 1:
-                print(str(y + 1) + ". " + settings.json[y]["desc"] + ": \n   " + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
+                print(str(y + 1) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
+
+        print("\nLogging settings -\n")
+        for y in range (0, len(settings.json)):
+            if settings.json[y]["section"] == 2:
+                print(str(y + 1) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
 
         option = input("\nEnter the setting number (1 to " + str(len(settings.json)) + ") to edit the setting, or:\nq. Quit\n\nOption:")
 
@@ -433,6 +475,7 @@ def create_file(notification = ""): # creates and writes the file
         if os.path.exists(folder + "/") == False:
             os.makedirs(folder + "/")
 
+    logger.add_log_entry("Creating file...")
     print("Creating file...")
 
     starttime = time.time()
@@ -445,6 +488,7 @@ def create_file(notification = ""): # creates and writes the file
         for y in range (0, columns.get_columns_total()):
             headers.append(columns.json[y]["name"])
 
+        logger.add_log_entry("Writing headers: " + str([headers]))
         writer.writerows([headers])
 
         values = []
@@ -453,12 +497,14 @@ def create_file(notification = ""): # creates and writes the file
             for x in range (0, columns.get_columns_total()):
                 values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
 
+            logger.add_log_entry("Writing values: " + str([values]))
             writer.writerows([values])
 
             values = []
 
 
     if settings.compress == "y":
+        logger.add_log_entry("Compressing generated file...")
         print("\nCompressing generated file...")
 
         with open(file, 'rb') as currentfile:
@@ -467,13 +513,18 @@ def create_file(notification = ""): # creates and writes the file
 
         os.remove(file)
 
-        menu("\nTook %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".gz'...\n")
+        message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".gz'..."
     else:
-        menu("\nTook %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows in '" + file + "'...\n")
+        message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows in '" + file + "'..."
+
+    logger.add_log_entry(message, True)
+    menu("\n" + message + "\n")
              
 
 def menu(notification = ""): # main menu, first thing the user will see
     clear()
+
+    logger.toggle_logger(settings.log, "Logging enabled, loading menu.")
 
     filename = settings.filename 
     columnfile = settings.columnfile
