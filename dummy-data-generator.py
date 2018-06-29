@@ -108,6 +108,9 @@ class ValueList():
     def get_random_list_value(self):
         return self.list[random.randint(0, self.listlength - 1)]
 
+    def reset_index(self):
+        self.listindex = -1
+
 valuelist = ValueList()
 
 def clear(platformname = sys.platform): # clear the terminal buffer ~ NOTE: this seems to be quite buggy, need to come back to this
@@ -482,6 +485,7 @@ def menu(notification = ""): # main menu, first thing the user will see
         columnfile = settings.columnfolder + "/" + settings.columnfile
 
     columns.get_columns()
+    valuelist.reset_index()
 
     print("Dummy data generator v" + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\nCurrent column file: " + columnfile + "\n" + notification)
 
