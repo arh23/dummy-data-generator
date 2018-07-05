@@ -437,9 +437,9 @@ def get_values(value, rownumber): # reads the value for each column, and process
                     values = []
 
                     if randomlist:
-                        output = valuelist.get_random_list_value()
+                        output = output + valuelist.get_random_list_value()
                     elif orderedlist:
-                        output = valuelist.get_next_list_value()
+                        output = output + valuelist.get_next_list_value()
 
                     break
                     
