@@ -4,8 +4,17 @@ import csv, random, time, json, os, sys, platform, datetime, gzip, shutil
 class Logger():
     def __init__(self):
         self.log = []
-        self.enabled = False
 
+    def get_logging_state(self):
+        try:
+            if settings.log == "y":
+                return True
+            else:
+                return False
+        except:
+            return False
+
+    '''
     def toggle_logger(self, value, message):
         if value == "y":
             self.enabled = True
@@ -13,10 +22,11 @@ class Logger():
                 self.add_log_entry(message, True)
         else:
             self.enabled = False
+    '''
 
     def add_log_entry(self, value, write = False):
         now = datetime.datetime.now()
-        if self.enabled:
+        if self.get_logging_state():
             self.log.append("[" + str('%02d' % now.hour) + ":" + str('%02d' % now.minute) + ":" + str('%02d' % now.second) + "] " + value)
             if write == True:
                 self.write_log()
@@ -118,6 +128,7 @@ class Columns():
         with open(self.jsonfilename, "w") as jsonfile:
             json.dump(self.json, jsonfile)
 
+        logger.add_log_entry("Updated columns - " + str(self.json))
         self.get_columns()
 
     def get_columns_total(self): # returns number of different columns in the column json data
@@ -212,6 +223,8 @@ def view_one_setting(index): # displays a selected setting in the terminal and p
         elif option == "1":
             settings.json[index - 1]["value"] = input("\nEnter new setting value:")
             settings.update_settings()
+
+            logger.add_log_entry("Value for setting " + str(index) + " updated!", True)
             view_settings("Value for setting " + str(index) + " updated!\n\n")
         else:
             notification = "\nInvalid option...\n"
@@ -244,6 +257,7 @@ def view_columns(notification = ""): # displays the columns in the terminal, and
             columns.update_column_data()
 
             notification = "New column " + str(int(columns.get_columns_total())) + " added!\n\n"
+            logger.add_log_entry("New column " + str(int(columns.get_columns_total())) + " added!", True)
         elif option == "x":
             index = int(input("\nEnter the column number you want to delete: ")) - 1
             confirm = input("Are you sure you want to delete column " + str(index + 1) + "? y/n\n")
@@ -252,7 +266,8 @@ def view_columns(notification = ""): # displays the columns in the terminal, and
                 columns.json.pop(index)
                 columns.update_column_data()
 
-                notification = "Column deleted!\n\n"
+                notification = "Column " + str(index + 1) + " deleted!\n\n"
+                logger.add_log_entry("Column " + str(index + 1) + " deleted!", True)
             else:
                 notification = "Column NOT deleted!\n\n"
         else:
@@ -283,15 +298,20 @@ def view_one_column(index): # displays a selected column in the terminal and pro
             print("\nView the documentation for the possible column values and placeholders that can be used.\n")
             columns.json[index - 1]["value"] = input("Enter new column value:")
             columns.update_column_data()
-            view_columns("Column value for column " + str(index) + " updated!\n\n")
+
+            message = "Column value for column " + str(index) + " updated!"
+            logger.add_log_entry(message, True)
+            view_columns(message + "\n\n")
         elif option == "x":
             confirm = input("\nAre you sure you want to delete column " + str(index) + "? y/n\n")
 
             if confirm == "y":
-                columns.json.pop(index)
+                columns.json.pop(index - 1)
                 columns.update_column_data()
 
-                view_columns("Column " + str(index) + " deleted!\n\n")
+                message = "Column " + str(index) + " deleted!"
+                logger.add_log_entry(message, True)
+                view_columns(message + "\n\n")
             else:
                 view_columns("Column " + str(index) + " NOT deleted!\n\n")
         else:
@@ -523,8 +543,6 @@ def create_file(notification = ""): # creates and writes the file
 
 def menu(notification = ""): # main menu, first thing the user will see
     clear()
-
-    logger.toggle_logger(settings.log, "Logging enabled, loading menu.")
 
     filename = settings.filename 
     columnfile = settings.columnfile
