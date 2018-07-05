@@ -30,6 +30,10 @@ You can use various placeholders to generate random or incremental data, for exa
     - *(3%20.5,30.5)* - this will generate a random number between 20.5 and 30.5 with 3 decimal places. The number of decimal places needs to be before the percentage sign.
     - *(-4,2)* - this will generate a number between -4 and 2 with no decimals.
 
+- *test value [1|2|3]* - this will generate fixed text with a random value picked from within the square brackets, and separated by a vertical bar.
+
+- *test value [1,2,3]* - this will generate fixed text with a value selected from within the square brackets. The commas separate the values, and represent that this is "ordered", meaning that "1" will be picked first, then "2" etc. Once the end of the list is reached, it will loop back to the start.
+
 Columns can also be added and deleted via the script.
 
 #### File
@@ -70,13 +74,15 @@ A settings file (*settings.json*) is also created when the script has been run f
 
 - Name of the folder where the columns are stored - set to "columns" by default. If left blank, the script will create and/or use the columns file in the same location as the script.
 
-- Whether the script will compress the file after generation - set to "n" by default. Compressed to *.gz* only at this time.
+- Allow the script to compress the file after generation - set to "n" by default. Compressed to *.gz* only at this time.
 
 - The number of rows to generate - this value is unset by default. The script will ask the user to input the desired number of rows before generation per generation, if unset.
 
 - Index value where the script starts counting from when creating rows - set to 0 by default. The value is not inclusive, counts will start at value + 1.
 
 - The minimum and maximum values generated when using the '?' placeholder for the column value - default minimum is 1 and default maximum is 1,000,000.
+
+- Allow the script to create a log, containing details of the generation - disabled by default. The log is created in the "log" directory in the same location of execution.
 
 You can modify the settings from within the script, or directly via the JSON file.
 
