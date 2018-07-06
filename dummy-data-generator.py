@@ -476,70 +476,86 @@ def get_values(value, rownumber): # reads the value for each column, and process
     return output
 
 def create_file(notification = ""): # creates and writes the file
-    clear()
-    
-    if settings.numberofrows == "":
-        settings.numberofrows = input(notification + "Enter the number of rows to generate (or enter 'q' or 'b' to go back to the menu): ")
-
-    rows = settings.numberofrows
-    file = get_filename()
-    folder = settings.foldername
-    rownumber = settings.rownumber
-
-    if rows == "q" or rows == "b":
-        menu()
-    elif rows.isdigit() == False and (rows != 'q' or rows != 'b'):
-        create_file("Please enter a number...\n\n")
-
-    if folder != "":
-        if os.path.exists(folder + "/") == False:
-            os.makedirs(folder + "/")
-
-    logger.add_log_entry("Creating file...")
-    print("Creating file...")
-
-    starttime = time.time()
-
-    with open(file, 'w') as currentfile:
-        writer = csv.writer(currentfile, delimiter=',', lineterminator='\n', quoting=csv.QUOTE_ALL)
+    try:
+        clear()
         
-        headers = []
+        currentcolumn = 0
 
-        for y in range (0, columns.get_columns_total()):
-            headers.append(columns.json[y]["name"])
+        if settings.numberofrows == "":
+            settings.numberofrows = input(notification + "Enter the number of rows to generate (or enter 'q' or 'b' to go back to the menu): ")
 
-        logger.add_log_entry("Writing headers: " + str([headers]))
-        writer.writerows([headers])
+        rows = settings.numberofrows
+        file = get_filename()
+        folder = settings.foldername
+        rownumber = settings.rownumber
 
-        values = []
-        logger.add_log_entry("Generating values from: " + str(columns.json))
+        if rows == "q" or rows == "b":
+            menu()
+        elif rows.isdigit() == False and (rows != 'q' or rows != 'b'):
+            create_file("Please enter a number...\n\n")
 
-        for z in range (1, int(rows) + 1):
-            for x in range (0, columns.get_columns_total()):
-                values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
+        if folder != "":
+            if os.path.exists(folder + "/") == False:
+                os.makedirs(folder + "/")
 
-            writer.writerows([values])
+        logger.add_log_entry("Creating file...")
+        print("Creating file...")
+
+        starttime = time.time()
+
+        with open(file, 'w') as currentfile:
+            writer = csv.writer(currentfile, delimiter=',', lineterminator='\n', quoting=csv.QUOTE_ALL)
+            
+            headers = []
+
+            for y in range (0, columns.get_columns_total()):
+                headers.append(columns.json[y]["name"])
+
+            logger.add_log_entry("Writing headers: " + str([headers]))
+            writer.writerows([headers])
 
             values = []
+            logger.add_log_entry("Generating values from: " + str(columns.json))
 
+            for z in range (1, int(rows) + 1):
+                for x in range (0, columns.get_columns_total()):
+                    currentcolumn = x + 1
+                    values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
 
-    if settings.compress == "y":
-        logger.add_log_entry("Compressing generated file...")
-        print("\nCompressing generated file...")
+                writer.writerows([values])
 
-        with open(file, 'rb') as currentfile:
-            with gzip.open(file + '.gz', 'wb') as compressedfile:
-                shutil.copyfileobj(currentfile, compressedfile)
+                values = []
 
+        if settings.compress == "y":
+            logger.add_log_entry("Compressing generated file...")
+            print("\nCompressing generated file...")
+
+            with open(file, 'rb') as currentfile:
+                with gzip.open(file + '.gz', 'wb') as compressedfile:
+                    shutil.copyfileobj(currentfile, compressedfile)
+
+            os.remove(file)
+
+            message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".gz'..."
+        else:
+            message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows in '" + file + "'..."
+
+        logger.add_log_entry(message, True)
+        menu("\n" + message + "\n")
+    except ValueError as err:
+        logger.add_log_entry("ERROR - Invalid value specified for column " + str(currentcolumn) + " - " + str(columns.json[currentcolumn - 1]) +", took %.2f seconds before failing." % (time.time() - starttime), True)
+        
         os.remove(file)
+        logger.add_log_entry("Deleting file '" + file + "'...", True)
 
-        message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".gz'..."
-    else:
-        message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows in '" + file + "'..."
-
-    logger.add_log_entry(message, True)
-    menu("\n" + message + "\n")
-             
+        menu("\nAn error occurred: Invalid value specified for column " + str(currentcolumn) + " - " + str(columns.json[currentcolumn - 1]) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime))         
+    except Exception as err:
+        logger.add_log_entry("ERROR - " + str(err) + "\nTook %.2f seconds before failing." % (time.time() - starttime), True)
+        
+        os.remove(file)
+        logger.add_log_entry("Deleting file '" + file + "'...", True)
+        
+        menu("\nAn error occurred: " + str(err) + "\nTook %.2f seconds before failing." % (time.time() - starttime)) 
 
 def menu(notification = ""): # main menu, first thing the user will see
     clear()
