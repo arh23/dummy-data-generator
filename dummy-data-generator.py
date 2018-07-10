@@ -224,7 +224,7 @@ def view_one_setting(index): # displays a selected setting in the terminal and p
             settings.json[index - 1]["value"] = input("\nEnter new setting value:")
             settings.update_settings()
 
-            logger.add_log_entry("Value for setting " + str(index) + " updated!", True)
+            logger.add_log_entry("Value for setting '" + settings.json[index - 1]["key"] + "' updated!", True)
             view_settings("Value for setting " + str(index) + " updated!\n\n")
         else:
             notification = "\nInvalid option...\n"
@@ -256,18 +256,18 @@ def view_columns(notification = ""): # displays the columns in the terminal, and
 
             columns.update_column_data()
 
-            notification = "New column " + str(int(columns.get_columns_total())) + " added!\n\n"
-            logger.add_log_entry("New column " + str(int(columns.get_columns_total())) + " added!", True)
+            notification = "New column '" + columns.json[int(columns.get_columns_total() - 1)]["name"] + "' added!\n\n"
+            logger.add_log_entry("New column '" + columns.json[int(columns.get_columns_total() - 1)]["name"] + "' added!", True)
         elif option == "x":
             index = int(input("\nEnter the column number you want to delete: ")) - 1
             confirm = input("Are you sure you want to delete column " + str(index + 1) + "? y/n\n")
 
             if confirm == "y":
+                notification = "Column '" + columns.json[index]["name"] + "' deleted!\n\n"
+                logger.add_log_entry("Column '" + columns.json[index]["name"] + "' deleted!", True)
+
                 columns.json.pop(index)
                 columns.update_column_data()
-
-                notification = "Column " + str(index + 1) + " deleted!\n\n"
-                logger.add_log_entry("Column " + str(index + 1) + " deleted!", True)
             else:
                 notification = "Column NOT deleted!\n\n"
         else:
@@ -306,14 +306,15 @@ def view_one_column(index): # displays a selected column in the terminal and pro
             confirm = input("\nAre you sure you want to delete column " + str(index) + "? y/n\n")
 
             if confirm == "y":
+                message = "Column '" + columns.json[index - 1]["name"] + "' deleted!"
+
                 columns.json.pop(index - 1)
                 columns.update_column_data()
 
-                message = "Column " + str(index) + " deleted!"
                 logger.add_log_entry(message, True)
                 view_columns(message + "\n\n")
             else:
-                view_columns("Column " + str(index) + " NOT deleted!\n\n")
+                view_columns("Column '" + columns.json[index - 1]["name"] + "' NOT deleted!\n\n")
         else:
             notification = "\nInvalid option...\n"
 
@@ -592,6 +593,6 @@ def menu(notification = ""): # main menu, first thing the user will see
     else:
         menu("\nInvalid option...\n")
 
-version = "0.6.0"
+version = "0.7.0"
 
 menu()
