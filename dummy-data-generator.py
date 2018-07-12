@@ -584,9 +584,9 @@ def menu(notification = ""): # main menu, first thing the user will see
 
     if option == "1":
         create_file()
-    if option == "2":
+    elif option == "2":
         view_columns()
-    if option == "3":
+    elif option == "3":
         view_settings()
     elif option == "q":
         exit()
