@@ -5,7 +5,7 @@ class Logger():
     def __init__(self):
         self.log = []
 
-    def get_logging_state(self):
+    def get_logging_state(self): # checks settings if logging is enabled, if it cannot check settings, logging will be disabled
         try:
             if settings.log == "y":
                 return True
@@ -14,24 +14,14 @@ class Logger():
         except:
             return False
 
-    '''
-    def toggle_logger(self, value, message):
-        if value == "y":
-            self.enabled = True
-            if message != "":
-                self.add_log_entry(message, True)
-        else:
-            self.enabled = False
-    '''
-
-    def add_log_entry(self, value, write = False):
+    def add_log_entry(self, value, write = False): # adds a new log entry
         now = datetime.datetime.now()
         if self.get_logging_state():
             self.log.append("[" + str('%02d' % now.hour) + ":" + str('%02d' % now.minute) + ":" + str('%02d' % now.second) + "] " + value)
             if write == True:
                 self.write_log()
 
-    def write_log(self):
+    def write_log(self): # writes the current log array into the log file and clears the log array
         now = datetime.datetime.now()
         logname = "logs/log-" + str('%02d' % now.day) + "-" + str('%02d' % now.month) + "-" + str('%02d' % now.year) + ".txt"
 
@@ -48,6 +38,18 @@ logger = Logger()
 
 class Settings():
     def __init__(self):
+        self.defaultsettings = [
+            {"section":0, "key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
+            {"section":0, "key":"foldername", "desc":"The name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
+            {"section":0, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
+            {"section":0, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
+            {"section":0, "key":"compress", "desc":"Toggle to compress the file after generation (compresses to .gz) y/n", "value":"n"},
+            {"section":1, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
+            {"section":1, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
+            {"section":1, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
+            {"section":1, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"},
+            {"section":2, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n"}
+        ]
         self.update_values()
 
     def update_values(self): # update attribute values
@@ -66,19 +68,7 @@ class Settings():
     def get_settings(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
         if os.path.exists('settings.json') == False:
             with open('settings.json', 'w') as jsonfile:
-                settings = [
-                    {"section":0, "key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
-                    {"section":0, "key":"foldername", "desc":"The name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
-                    {"section":0, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
-                    {"section":0, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
-                    {"section":0, "key":"compress", "desc":"Toggle to compress the file after generation (compresses to .gz) y/n", "value":"n"},
-                    {"section":1, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
-                    {"section":1, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
-                    {"section":1, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
-                    {"section":1, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"},
-                    {"section":2, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n"}
-                ]
-                json.dump(settings, jsonfile)
+                json.dump(self.defaultsettings, jsonfile)
 
         with open('settings.json') as jsonfile:
             settings = json.load(jsonfile)
@@ -86,11 +76,28 @@ class Settings():
         return settings
 
     def get_setting_value(self, value): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
-        for x in range (0, len(self.json)):
-            if self.json[x]["key"] == value:
-                settingvalue = self.json[x]["value"]
-        
-        return settingvalue
+        try:
+            for x in range (0, len(self.json)):
+                if self.json[x]["key"] == value:
+                    settingvalue = self.json[x]["value"]
+            
+            return settingvalue
+        except UnboundLocalError:
+            print("ERROR - could not load setting for '" + value + "', updating current settings file.")
+
+            index = 0
+
+            while True:
+                try:
+                    if self.defaultsettings[index]["key"] == value:
+                        self.json.append(self.defaultsettings[index])
+                        self.update_settings()
+                        break
+                    else:
+                        index = index + 1
+                except IndexError:
+                    print("ERROR - unknown setting specified in code!\n")
+                    break
 
     def update_settings(self): # saves all changes to the settings in the settings json file
         with open('settings.json', "w") as jsonfile:
@@ -101,7 +108,7 @@ class Settings():
 settings = Settings()
 
 class Columns():
-    def get_columns(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
+    def get_columns(self): # gets the columns from the columns json file, if the columns json file is not present, this will create the file
         self.jsonfilename = settings.columnfile
 
         if settings.columnfolder != "":
@@ -140,11 +147,11 @@ class ValueList():
     def __init__(self):
         self.listindex = -1
 
-    def set_list(self, listvalue): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
+    def set_list(self, listvalue): # sets the the list and listlength of the current ValueList instance, based on the list set for listvalue
         self.list = listvalue
         self.listlength = len(listvalue)
 
-    def get_next_list_value(self):
+    def get_next_list_value(self): # increments the list pointer by one and returns the next value in the list
         self.listindex = self.listindex + 1
 
         if self.listindex < self.listlength:
@@ -153,10 +160,10 @@ class ValueList():
             self.listindex = -1
             return self.get_next_list_value()
 
-    def get_random_list_value(self):
+    def get_random_list_value(self): # selects a random value from the current list
         return self.list[random.randint(0, self.listlength - 1)]
 
-    def reset_index(self):
+    def reset_index(self): # resets the index, to correctly count from the start of the current list again
         self.listindex = -1
 
 valuelist = ValueList()
@@ -318,7 +325,7 @@ def view_one_column(index): # displays a selected column in the terminal and pro
         else:
             notification = "\nInvalid option...\n"
 
-def get_filename():
+def get_filename(): # generate the name of the file, based on the current settings 'filename' value
     currentindex = 0
     filename = ""
     file = settings.filename
