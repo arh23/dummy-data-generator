@@ -561,11 +561,16 @@ def create_file(notification = ""): # creates and writes the file
 def menu(notification = ""): # main menu, first thing the user will see
     clear()
 
+    settings.update_values()
+
     filename = settings.filename 
     columnfile = settings.columnfile
 
     if (settings.foldername != ""):
-        filename = settings.foldername + "/" + settings.filename 
+        if settings.filename != "":
+            filename = settings.foldername + "/" + settings.filename
+        else:
+            filename = settings.foldername + "/<file name not specified>"
 
     if (settings.columnfolder != ""):
         columnfile = settings.columnfolder + "/" + settings.columnfile
