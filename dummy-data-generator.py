@@ -431,6 +431,7 @@ def get_values(value, rownumber): # reads the value for each column, and process
 
                     if valueformat != "":
                         output = output + str(valueformat % generatedvalue)
+                        valueformat = "%.0f"
                     else:
                         output = output + str(generatedvalue)
 
