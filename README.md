@@ -76,6 +76,8 @@ A settings file (*settings.json*) is also created when the script has been run f
 
 - Allow the script to compress the file after generation - set to "n" by default. Compressed to *.gz* only at this time.
 
+- Format of the file being genereated - set to "csv" by default. Can accept either "xls" or "csv" at this time.
+
 - The number of rows to generate - this value is unset by default. The script will ask the user to input the desired number of rows before generation per generation, if unset.
 
 - Index value where the script starts counting from when creating rows - set to 0 by default. The value is not inclusive, counts will start at value + 1.
@@ -91,3 +93,4 @@ Both JSON files are generated in the same directory as the script.
 ### Requirements
 
 - Python (written and tested with Python 3.5.4)
+- xlwt
