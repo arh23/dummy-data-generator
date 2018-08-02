@@ -6,6 +6,14 @@ Generate multiple rows of dummy/test data using template values.
 
 This documentation will guide you through the different operators and functionality of the pattern system.
 
+### Setup
+
+Before use, setup dummy-data-generator by executing the following command from within the directory *dummy-data-generator.py* is located:
+
+```
+pip install -r requirements.txt
+```
+
 ### Usage
 
 #### Columns
