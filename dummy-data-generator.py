@@ -1,5 +1,5 @@
 #! coding: utf-8
-import csv, random, time, json, os, sys, platform, datetime, gzip, shutil
+import csv, random, time, json, os, sys, platform, datetime, gzip, shutil, xlwt
 
 class Logger():
     def __init__(self):
@@ -39,16 +39,17 @@ logger = Logger()
 class Settings():
     def __init__(self):
         self.defaultsettings = [
-            {"section":0, "key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
-            {"section":0, "key":"foldername", "desc":"The name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
-            {"section":0, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
-            {"section":0, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
-            {"section":0, "key":"compress", "desc":"Toggle to compress the file after generation (compresses to .gz) y/n", "value":"n"},
-            {"section":1, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
-            {"section":1, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
-            {"section":1, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
-            {"section":1, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"},
-            {"section":2, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n"}
+            {"section":0, "index":1, "key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
+            {"section":0, "index":2, "key":"foldername", "desc":"The name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
+            {"section":0, "index":3, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
+            {"section":0, "index":4, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
+            {"section":0, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation (compresses to .gz) y/n", "value":"n"},
+            {"section":0, "index":6, "key":"fileformat", "desc":"The format of the file generated (csv or xls)", "value":"csv"},
+            {"section":1, "index":7, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
+            {"section":1, "index":8, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
+            {"section":1, "index":9, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
+            {"section":1, "index":10, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"},
+            {"section":2, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n"}
         ]
         self.update_values()
 
@@ -59,6 +60,7 @@ class Settings():
         self.columnfile = self.get_setting_value("columnfile")
         self.columnfolder = self.get_setting_value("columnfolder")
         self.compress = self.get_setting_value("compress")
+        self.fileformat = self.get_setting_value("fileformat")
         self.numberofrows = self.get_setting_value("numberofrows")
         self.rownumber = self.get_setting_value("rownumber")
         self.min = self.get_setting_value("min")
@@ -186,17 +188,17 @@ def view_settings(notification = ""): # displays the settings in the terminal, a
         print("File and folder settings -\n")
         for y in range (0, len(settings.json)):
             if settings.json[y]["section"] == 0:
-                print(str(y + 1) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
+                print(str(settings.json[y]["index"]) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
 
         print("\nData generation settings -\n")
         for y in range (0, len(settings.json)):
             if settings.json[y]["section"] == 1:
-                print(str(y + 1) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
+                print(str(settings.json[y]["index"]) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
 
         print("\nLogging settings -\n")
         for y in range (0, len(settings.json)):
             if settings.json[y]["section"] == 2:
-                print(str(y + 1) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
+                print(str(settings.json[y]["index"]) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
 
         option = input("\nEnter the setting number (1 to " + str(len(settings.json)) + ") to edit the setting, or:\nq. Quit\n\nOption:")
 
@@ -331,7 +333,7 @@ def get_filename(): # generate the name of the file, based on the current settin
     file = settings.filename
 
     if file == "":
-        file = input("Enter a name for the file (do not include .csv): ") + ".csv"
+        file = input("Enter a name for the file (do not include the format of the file): ")
 
     now = datetime.datetime.now()
 
@@ -371,6 +373,11 @@ def get_filename(): # generate the name of the file, based on the current settin
 
     if settings.foldername != "":
         filename = settings.foldername + "/" + filename
+
+    if settings.fileformat == "":
+        settings.fileformat = "csv"
+
+    filename = filename + "." + settings.fileformat
 
     return filename
 
@@ -512,28 +519,41 @@ def create_file(notification = ""): # creates and writes the file
 
         starttime = time.time()
 
-        with open(file, 'w') as currentfile:
-            writer = csv.writer(currentfile, delimiter=',', lineterminator='\n', quoting=csv.QUOTE_ALL)
-            
-            headers = []
+        if settings.fileformat == "csv":
+            with open(file, 'w') as currentfile:
+                writer = csv.writer(currentfile, delimiter=',', lineterminator='\n', quoting=csv.QUOTE_ALL)
+                
+                headers = []
+
+                for y in range (0, columns.get_columns_total()):
+                    headers.append(columns.json[y]["name"])
+
+                logger.add_log_entry("Writing headers: " + str([headers]))
+                writer.writerows([headers])
+
+                values = []
+                logger.add_log_entry("Generating values from: " + str(columns.json))
+
+                for z in range (1, int(rows) + 1):
+                    for x in range (0, columns.get_columns_total()):
+                        values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
+
+                    writer.writerows([values])
+
+                    values = []
+        elif settings.fileformat == "xls":
+            book = xlwt.Workbook()
+            sh = book.add_sheet("sheet")
 
             for y in range (0, columns.get_columns_total()):
-                headers.append(columns.json[y]["name"])
-
-            logger.add_log_entry("Writing headers: " + str([headers]))
-            writer.writerows([headers])
-
-            values = []
-            logger.add_log_entry("Generating values from: " + str(columns.json))
+                sh.write(0, y, columns.json[y]["name"])
 
             for z in range (1, int(rows) + 1):
                 for x in range (0, columns.get_columns_total()):
-                    currentcolumn = x + 1
-                    values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
+                    sh.write(z, x, get_values(columns.json[x]["value"], int(rownumber) + z))
 
-                writer.writerows([values])
-
-                values = []
+            logger.add_log_entry("Writing xls file.")
+            book.save(file)
 
         if settings.compress == "y":
             logger.add_log_entry("Compressing generated file...")
@@ -576,7 +596,7 @@ def menu(notification = ""): # main menu, first thing the user will see
 
     if (settings.foldername != ""):
         if settings.filename != "":
-            filename = settings.foldername + "/" + settings.filename
+            filename = settings.foldername + "/" + settings.filename + ("." + settings.fileformat if settings.fileformat != "" else ".csv")
         else:
             filename = settings.foldername + "/<file name not specified>"
 
