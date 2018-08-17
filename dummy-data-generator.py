@@ -183,7 +183,7 @@ def view_settings(notification = ""): # displays the settings in the terminal, a
     while option != "q":
         clear()
 
-        print(notification + "The following settings alter how the test data is generated:\n")
+        print("The following settings alter how the test data is generated:\n")
 
         print("File and folder settings -\n")
         for y in range (0, len(settings.json)):
@@ -200,7 +200,7 @@ def view_settings(notification = ""): # displays the settings in the terminal, a
             if settings.json[y]["section"] == 2:
                 print(str(settings.json[y]["index"]) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
 
-        option = input("\nEnter the setting number (1 to " + str(len(settings.json)) + ") to edit the setting, or:\nq. Quit\n\nOption:")
+        option = input(notification + "\nEnter the setting number (1 to " + str(len(settings.json)) + ") to edit the setting, or:\nq. Quit\n\nOption:")
 
         if option == "q":
             menu()
@@ -208,9 +208,9 @@ def view_settings(notification = ""): # displays the settings in the terminal, a
             if int(option) <= len(settings.json):
                 view_one_setting(int(option))
             elif int(option) > len(settings.json):
-                view_settings("No setting with the number " + option + "...\n")
+                view_settings("\nNo setting with the number " + option + "...\n")
         else:
-            view_settings("No setting with the number " + option + "...\n")
+            view_settings("\nInvalid option...\n")
 
 def view_one_setting(index): # displays a selected setting in the terminal and provides the user with more options for the particular setting
     option = ""
@@ -234,7 +234,7 @@ def view_one_setting(index): # displays a selected setting in the terminal and p
             settings.update_settings()
 
             logger.add_log_entry("Value for setting '" + settings.json[index - 1]["key"] + "' updated!", True)
-            view_settings("Value for setting " + str(index) + " updated!\n\n")
+            view_settings("\nValue for setting " + str(index) + " updated!\n")
         else:
             notification = "\nInvalid option...\n"
 
@@ -243,7 +243,7 @@ def view_columns(notification = ""): # displays the columns in the terminal, and
     while option != "q":
         clear()
 
-        print(notification + "The following columns and values are currently defined:\n")
+        print("The following columns and values are currently defined:\n")
 
         count = 0
 
@@ -251,7 +251,7 @@ def view_columns(notification = ""): # displays the columns in the terminal, and
             print(str(y) + ". " + columns.json[y - 1]["name"] + " - " + columns.json[y - 1]["value"])
             count = y
 
-        option = input("\nEnter a column number (1 to " + str(columns.get_columns_total()) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\n\nOption:")
+        option = input(notification + "\nEnter a column number (1 to " + str(columns.get_columns_total()) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\n\nOption:")
 
         if option == "q":
             menu()
@@ -259,28 +259,28 @@ def view_columns(notification = ""): # displays the columns in the terminal, and
             if int(option) <= count:
                 view_one_column(int(option))
             elif int(option) > count:
-                notification = "No column " + option + "...\n"
+                notification = "\nNo column " + option + "...\n"
         elif option == "+":
             columns.json.append({"name":input("\nEnter the name of the new column: "), "value":input("Enter the value of the new column: ")})
 
             columns.update_column_data()
 
-            notification = "New column '" + columns.json[int(columns.get_columns_total() - 1)]["name"] + "' added!\n\n"
+            notification = "\nNew column '" + columns.json[int(columns.get_columns_total() - 1)]["name"] + "' added!\n"
             logger.add_log_entry("New column '" + columns.json[int(columns.get_columns_total() - 1)]["name"] + "' added!", True)
         elif option == "x":
             index = int(input("\nEnter the column number you want to delete: ")) - 1
             confirm = input("Are you sure you want to delete column " + str(index + 1) + "? y/n\n")
 
             if confirm == "y":
-                notification = "Column '" + columns.json[index]["name"] + "' deleted!\n\n"
+                notification = "\nColumn '" + columns.json[index]["name"] + "' deleted!\n"
                 logger.add_log_entry("Column '" + columns.json[index]["name"] + "' deleted!", True)
 
                 columns.json.pop(index)
                 columns.update_column_data()
             else:
-                notification = "Column NOT deleted!\n\n"
+                notification = "\nColumn NOT deleted!\n"
         else:
-            notification = "No column " + option + "...\n"
+            notification = "\nInvalid column or option...\n"
 
 def view_one_column(index): # displays a selected column in the terminal and provides the user with more options for the particular column
     option = ""
@@ -302,7 +302,7 @@ def view_one_column(index): # displays a selected column in the terminal and pro
         elif option == "1":
             columns.json[index - 1]["name"] = input("\nEnter new column name:")
             columns.update_column_data()
-            view_columns("Column name for column " + str(index) + " updated!\n\n")
+            view_columns("\nColumn name for column " + str(index) + " updated!\n")
         elif option == "2":
             print("\nView the documentation for the possible column values and placeholders that can be used.\n")
             columns.json[index - 1]["value"] = input("Enter new column value:")
@@ -310,7 +310,7 @@ def view_one_column(index): # displays a selected column in the terminal and pro
 
             message = "Column value for column " + str(index) + " updated!"
             logger.add_log_entry(message, True)
-            view_columns(message + "\n\n")
+            view_columns("\n" + message + "\n")
         elif option == "x":
             confirm = input("\nAre you sure you want to delete column " + str(index) + "? y/n\n")
 
@@ -321,9 +321,9 @@ def view_one_column(index): # displays a selected column in the terminal and pro
                 columns.update_column_data()
 
                 logger.add_log_entry(message, True)
-                view_columns(message + "\n\n")
+                view_columns("\n" + message + "\n")
             else:
-                view_columns("Column '" + columns.json[index - 1]["name"] + "' NOT deleted!\n\n")
+                view_columns("\nColumn '" + columns.json[index - 1]["name"] + "' NOT deleted!\n")
         else:
             notification = "\nInvalid option...\n"
 
