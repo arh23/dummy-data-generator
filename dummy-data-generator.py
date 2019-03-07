@@ -230,13 +230,101 @@ def view_one_setting(index): # displays a selected setting in the terminal and p
         elif option == "b":
             view_settings()
         elif option == "1":
-            settings.json[index - 1]["value"] = input("\nEnter new setting value:")
-            settings.update_settings()
+            if settings.json[index - 1]["key"] == "columnfile":
+                view_column_files("", "settings")
+            else:
+                settings.json[index - 1]["value"] = input("\nEnter new setting value:")
+                settings.update_settings()
 
-            logger.add_log_entry("Value for setting '" + settings.json[index - 1]["key"] + "' updated!", True)
-            view_settings("\nValue for setting " + str(index) + " updated!\n")
+                logger.add_log_entry("Value for setting '" + settings.json[index - 1]["key"] + "' updated!", True)
+                view_settings("\nValue for setting " + str(index) + " updated!\n")
         else:
             notification = "\nInvalid option...\n"
+
+def view_column_files(notification = "", prevstate = "menu"): # displays the column files in the terminal, and allows the user to select a file to use
+    option = ""
+    while option != "q":
+        clear()
+
+        subnotif = "\n"
+
+        print("The following column files are located in the '" + settings.columnfolder + "' folder: \n\nCurrent columns file: " + settings.columnfile + "\n")
+
+        if settings.columnfolder == "":
+            settings.columnfolder = "."
+
+        files = os.listdir(settings.columnfolder)
+
+        fileslist = []
+        for names in files:
+            if names.endswith(".json"):
+                fileslist.append(names)
+        
+        for y in range (0, len(fileslist)):
+            print(str(y + 1) + ". " + fileslist[y])
+
+        if len(fileslist) == 1:
+            option = input(notification + "\nEnter q to quit.\n\nOption:")
+
+            if option == "q":
+                if prevstate == "menu":
+                    menu()
+                elif prevstate == "settings":
+                    view_settings()
+                else:
+                    menu()
+            else:
+                notification = "\nThe only available column file has already been selected...\n"
+        else:
+            option = input(notification + "\nEnter a file number (1 to " + str(len(fileslist)) + ") to select the column for use, or:\n+. Add a column file\nx. Delete a column file\nq. Quit\n\nOption:")
+
+            if option == "q":
+                if prevstate == "menu":
+                    menu()
+                elif prevstate == "settings":
+                    view_settings()
+                else:
+                    menu()
+            elif option == "+":
+                columnfilename = input("\nEnter the name of the new column file (excluding file extension): ")
+
+                for y in range (0, len(settings.json)):
+                    if settings.json[y]["key"] == "columnfile":
+                        settings.json[y]["value"] = columnfilename + ".json"
+                        settings.update_settings()
+
+                settings.update_settings()
+                columns.get_columns()
+                notification = "\nCreated and selected new column file " + columnfilename + ".json...\n"
+            elif option == "x":
+                columnfilename = input("\nEnter the name of the column file to be deleted (excluding file extension): ") + ".json"
+
+                if os.path.exists(settings.columnfolder + "/" + columnfilename):
+                    os.remove(settings.columnfolder + "/" + columnfilename)
+
+                    if settings.columnfile == columnfilename:
+                        for y in range (0, len(settings.json)):
+                            if settings.json[y]["key"] == "columnfile":
+                                settings.json[y]["value"] = "columns.json"
+                                settings.update_settings()
+                                subnotif = "Reverted column file to 'columns.json' as deleted file was the selected columns file!\n"
+
+                    columns.get_columns()
+                    notification = "\nDeleted column file " + columnfilename + "... " + subnotif
+                else:
+                    notification = "\nFile " + columnfilename + " does not exist... " + subnotif
+            elif option.isdigit():
+                if int(option) <= len(fileslist):
+                    for y in range (0, len(settings.json)):
+                        if settings.json[y]["key"] == "columnfile":
+                            settings.json[y]["value"] = fileslist[int(option) - 1]
+                            settings.update_settings()
+                            notification = "\nSelected column file " + option + ", " + fileslist[int(option) - 1] + "...\n"
+
+                elif int(option) > len(fileslist):
+                    notification = "\nNo column file " + option + "...\n"
+            else:
+                notification = "\nInvalid column file or option...\n"
 
 def view_columns(notification = ""): # displays the columns in the terminal, and allows the user to select columns
     option = ""
@@ -610,7 +698,8 @@ def menu(notification = ""): # main menu, first thing the user will see
 
     print("1. Generate file")
     print("2. Add and edit columns")
-    print("3. Settings")
+    print("3. View column files")
+    print("4. Settings")
     print("q. Quit")
 
     option = input("\nEnter option: ")
@@ -620,12 +709,14 @@ def menu(notification = ""): # main menu, first thing the user will see
     elif option == "2":
         view_columns()
     elif option == "3":
+        view_column_files()
+    elif option == "4":
         view_settings()
     elif option == "q":
         exit()
     else:
         menu("\nInvalid option...\n")
 
-version = "0.7.0"
+version = "0.8.0"
 
 menu()
