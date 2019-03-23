@@ -665,14 +665,19 @@ def create_file(notification = ""): # creates and writes the file
         os.remove(file)
         logger.add_log_entry("Deleting file '" + file + "'...", True)
 
-        menu("\nAn error occurred: Invalid value specified for column " + str(currentcolumn) + " - " + str(columns.json[currentcolumn - 1]) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime))         
+        menu("\nAn error occurred: Invalid value specified for column " + str(currentcolumn) + " - " + str(columns.json[currentcolumn - 1]) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime)) 
+    except FileNotFoundError as err:
+        settings.foldername = file[0:file.rfind("/")]
+        settings.filename = settings.filename[settings.filename.rfind("/") + 1:len(settings.filename)]
+
+        create_file()
     except Exception as err:
         logger.add_log_entry("ERROR - " + str(err) + "\nTook %.2f seconds before failing." % (time.time() - starttime), True)
         
         os.remove(file)
         logger.add_log_entry("Deleting file '" + file + "'...", True)
         
-        menu("\nAn error occurred: " + str(err) + "\nTook %.2f seconds before failing." % (time.time() - starttime)) 
+        menu("\nAn error occurred: " + str(err) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime)) 
 
 def menu(notification = ""): # main menu, first thing the user will see
     clear()
