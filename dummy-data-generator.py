@@ -596,6 +596,7 @@ def create_file(notification = ""): # creates and writes the file
         if rows == "q" or rows == "b":
             menu()
         elif rows.isdigit() == False and (rows != 'q' or rows != 'b'):
+            settings.numberofrows = ""
             create_file("Please enter a number...\n\n")
 
         if folder != "":
