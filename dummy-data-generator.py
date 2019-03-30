@@ -39,17 +39,17 @@ logger = Logger()
 class Settings():
     def __init__(self):
         self.defaultsettings = [
-            {"section":0, "index":1, "key":"filename", "desc": "Default name of files generated", "value": "data.csv"}, 
+            {"section":0, "index":1, "key":"filename", "desc": "Default name of files generated", "value": "data"}, 
             {"section":0, "index":2, "key":"foldername", "desc":"The name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
             {"section":0, "index":3, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
             {"section":0, "index":4, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
-            {"section":0, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation (compresses to .gz) y/n", "value":"n"},
-            {"section":0, "index":6, "key":"fileformat", "desc":"The format of the file generated (csv or xls)", "value":"csv"},
+            {"section":0, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation (compresses to .gz) y/n", "value":"n", "acceptedvalues":["y","n"]},
+            {"section":0, "index":6, "key":"fileformat", "desc":"The format of the file generated (csv or xls)", "value":"csv", "acceptedvalues":["csv","xls"]},
             {"section":1, "index":7, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
             {"section":1, "index":8, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
             {"section":1, "index":9, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
             {"section":1, "index":10, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"},
-            {"section":2, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n"}
+            {"section":2, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n", "acceptedvalues":["y","n"]}
         ]
         self.update_values()
 
@@ -233,11 +233,21 @@ def view_one_setting(index): # displays a selected setting in the terminal and p
             if settings.json[index - 1]["key"] == "columnfile":
                 view_column_files("", "settings")
             else:
-                settings.json[index - 1]["value"] = input("\nEnter new setting value:")
-                settings.update_settings()
+                try:
+                    inputvalue = input("\nEnter new setting value:")
+                    if inputvalue in settings.json[index - 1]["acceptedvalues"]:
+                        settings.json[index - 1]["value"] = inputvalue
+                        settings.update_settings()
 
-                logger.add_log_entry("Value for setting '" + settings.json[index - 1]["key"] + "' updated!", True)
-                view_settings("\nValue for setting " + str(index) + " updated!\n")
+                        view_settings("\nValue for setting " + str(index) + " updated!\n")
+                    else:
+                        notification = "\nInvalid value...\nMust be one of the following: " + str(settings.json[index - 1]["acceptedvalues"]) + "\n"
+                except KeyError:
+                    settings.json[index - 1]["value"] = inputvalue
+                    settings.update_settings()
+
+                    logger.add_log_entry("Value for setting '" + settings.json[index - 1]["key"] + "' updated!", True)
+                    view_settings("\nValue for setting " + str(index) + " updated!\n")
         else:
             notification = "\nInvalid option...\n"
 
