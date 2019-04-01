@@ -176,7 +176,7 @@ def clear(platformname = sys.platform): # clear the terminal buffer ~ NOTE: this
     else:
         os.system("clear")
 
-def view_settings(notification = ""): # displays the settings in the terminal, and allows the user to select settings
+def view_settings(notification = ""): # displays setting sections in the terminal, and allows the user to select which section to view
     settings.update_values()
 
     option = ""
@@ -185,32 +185,47 @@ def view_settings(notification = ""): # displays the settings in the terminal, a
 
         print("The following settings alter how the test data is generated:\n")
 
-        print("File and folder settings -\n")
-        for y in range (0, len(settings.json)):
-            if settings.json[y]["section"] == 0:
-                print(str(settings.json[y]["index"]) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
+        print("1. File and folder settings")
+        print("2. Data generation settings")
+        print("3. Logging settings")  
 
-        print("\nData generation settings -\n")
-        for y in range (0, len(settings.json)):
-            if settings.json[y]["section"] == 1:
-                print(str(settings.json[y]["index"]) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
-
-        print("\nLogging settings -\n")
-        for y in range (0, len(settings.json)):
-            if settings.json[y]["section"] == 2:
-                print(str(settings.json[y]["index"]) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
-
-        option = input(notification + "\nEnter the setting number (1 to " + str(len(settings.json)) + ") to edit the setting, or:\nq. Quit\n\nOption:")
+        option = input(notification + "\nEnter the section number (1 to 3) to view the settings for that section, or:\nq. Quit\n\nOption:")
 
         if option == "q":
             menu()
         elif option.isdigit():
-            if int(option) <= len(settings.json):
-                view_one_setting(int(option))
-            elif int(option) > len(settings.json):
-                view_settings("\nNo setting with the number " + option + "...\n")
+            if int(option) <= 3:
+                view_setting_group(int(option) - 1)
+            elif int(option) > 3:
+                view_settings("\nNo section with the number " + option + "...\n")
         else:
             view_settings("\nInvalid option...\n")
+
+def view_setting_group(section, notification = ""): # displays all the settings in the section, "section" is defined in settings.json
+    clear()
+    groupedsettings = []
+
+    print("The following settings alter how the test data is generated:\n")
+
+    count = 0
+
+    for y in range (0, len(settings.json)):
+        if settings.json[y]["section"] == section:
+            count += 1
+            groupedsettings.append(settings.json[y])
+            print(str(count) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
+
+    option = input(notification + "\nEnter the setting number (1 to " + str(len(groupedsettings)) + ") to edit the setting, or:\nq. Quit\n\nOption:")
+
+    if option == "q":
+        view_settings()
+    elif option.isdigit():
+        if int(option) <= len(groupedsettings):
+            view_one_setting(groupedsettings[int(option) - 1]["index"])
+        elif int(option) > len(groupedsettings):
+            view_setting_group(section, "\nNo setting with the number " + option + "...\n")
+    else:
+        view_setting_group(section, "\nInvalid option...\n")
 
 def view_one_setting(index): # displays a selected setting in the terminal and provides the user with more options for the particular setting
     option = ""
@@ -228,7 +243,7 @@ def view_one_setting(index): # displays a selected setting in the terminal and p
         if option == "q":
             menu()
         elif option == "b":
-            view_settings()
+            view_setting_group(settings.json[index - 1]["section"])
         elif option == "1":
             if settings.json[index - 1]["key"] == "columnfile":
                 view_column_files("", "settings")
