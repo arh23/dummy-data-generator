@@ -213,7 +213,7 @@ def view_setting_group(section, notification = ""): # displays all the settings 
         if settings.json[y]["section"] == section:
             count += 1
             groupedsettings.append(settings.json[y])
-            print(str(count) + ". " + settings.json[y]["desc"] + (": \n   " if (y + 1 < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
+            print(str(count) + ". " + settings.json[y]["desc"] + (": \n   " if (count < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
 
     option = input(notification + "\nEnter the setting number (1 to " + str(len(groupedsettings)) + ") to edit the setting, or:\nq. Quit\n\nOption:")
 
@@ -254,7 +254,7 @@ def view_one_setting(index): # displays a selected setting in the terminal and p
                         settings.json[index - 1]["value"] = inputvalue
                         settings.update_settings()
 
-                        view_settings("\nValue for setting " + str(index) + " updated!\n")
+                        view_setting_group(settings.json[index - 1]["section"], "\nValue updated!\n")
                     else:
                         notification = "\nInvalid value...\nMust be one of the following: " + str(settings.json[index - 1]["acceptedvalues"]) + "\n"
                 except KeyError:
@@ -262,7 +262,7 @@ def view_one_setting(index): # displays a selected setting in the terminal and p
                     settings.update_settings()
 
                     logger.add_log_entry("Value for setting '" + settings.json[index - 1]["key"] + "' updated!", True)
-                    view_settings("\nValue for setting " + str(index) + " updated!\n")
+                    view_setting_group(settings.json[index - 1]["section"], "\nValue updated!\n")
         else:
             notification = "\nInvalid option...\n"
 
