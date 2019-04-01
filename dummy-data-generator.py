@@ -103,7 +103,7 @@ class Settings():
 
     def update_settings(self): # saves all changes to the settings in the settings json file
         with open('settings.json', "w") as jsonfile:
-            json.dump(self.json, jsonfile)
+            jsonfile.write(json.dumps(self.json, indent=4))
 
         self.update_values()
 
@@ -126,7 +126,7 @@ class Columns():
                     {"value": "value 2", "name": "column 2"}, 
                     {"value": "value 3", "name": "column 3"}
                 ]
-                json.dump(data, jsonfile)
+                jsonfile.write(json.dumps(data, indent=4))
 
         with open(self.jsonfilename) as jsonfile:
             data = json.load(jsonfile)
@@ -135,7 +135,7 @@ class Columns():
 
     def update_column_data(self): # saves all changes to the column in the columns json file
         with open(self.jsonfilename, "w") as jsonfile:
-            json.dump(self.json, jsonfile)
+            jsonfile.write(json.dumps(self.json, indent=4))
 
         logger.add_log_entry("Updated columns - " + str(self.json))
         self.get_columns()
