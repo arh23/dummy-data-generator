@@ -114,7 +114,10 @@ class Settings():
         settingvalues = [None] * (len(self.json) + 1)
 
         for setting in self.json:
-            settingvalues[int(setting["index"])] = setting["value"]
+            if int(setting["index"]) > len(self.json):
+                settingvalues[len(self.json) - 1] = setting["value"]                    
+            else:
+                settingvalues[int(setting["index"])] = setting["value"]        
 
         return settingvalues
 
