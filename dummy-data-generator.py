@@ -109,6 +109,26 @@ class Settings():
 
         self.update_values()
 
+    def update_settings_file(self): # updates settings (excluding values) and adds new settings tothe settings file at start up, based on the default
+        for x in range (0, len(self.defaultsettings)):
+            try:
+                if self.json[x]["section"] != self.defaultsettings[x]["section"]:
+                    self.json[x]["section"] = self.defaultsettings[x]["section"]
+
+                if self.json[x]["index"] != self.defaultsettings[x]["index"]:
+                    self.json[x]["index"] = self.defaultsettings[x]["index"]
+
+                if self.json[x]["key"] != self.defaultsettings[x]["key"]:
+                    self.json[x]["key"] = self.defaultsettings[x]["key"]
+
+                if self.json[x]["desc"] != self.defaultsettings[x]["desc"]:
+                    self.json[x]["desc"] = self.defaultsettings[x]["desc"]
+
+            except IndexError:
+                self.json.append(self.defaultsettings[x])
+
+        self.update_settings()
+
 settings = Settings()
 
 class Columns():
@@ -217,7 +237,7 @@ def view_setting_group(section, notification = ""): # displays all the settings 
             groupedsettings.append(settings.json[y])
             print(str(count) + ". " + settings.json[y]["desc"] + (": \n   " if (count < 10) else ": \n    ") + (settings.json[y]["value"] if settings.json[y]["value"] != "" else "<no value>"))
 
-    option = input(notification + "\nEnter the setting number (1 to " + str(len(groupedsettings)) + ") to edit the setting, or:\nq. Quit\n\nOption:")
+    option = input(notification + "\nEnter the setting number" + ("" if len(groupedsettings) == 1 else " (1 to " + str(len(groupedsettings)) + ")") + " to edit the setting, or:\nq. Quit\n\nOption:")
 
     if option == "q":
         view_settings()
@@ -786,4 +806,5 @@ def menu(notification = ""): # main menu, first thing the user will see
 
 version = "0.8.0"
 
+settings.update_settings_file()
 menu()
