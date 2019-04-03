@@ -1,5 +1,5 @@
 #! coding: utf-8
-import csv, random, time, json, os, sys, platform, datetime, gzip, shutil, xlwt
+import csv, random, time, json, os, sys, platform, datetime, gzip, tarfile, shutil, xlwt
 
 class Logger():
     def __init__(self):
@@ -43,7 +43,8 @@ class Settings():
             {"section":0, "index":2, "key":"foldername", "desc":"The name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
             {"section":0, "index":3, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
             {"section":0, "index":4, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
-            {"section":0, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation (compresses to .gz) y/n", "value":"n", "acceptedvalues":["y","n"]},
+            {"section":0, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation y/n", "value":"n", "acceptedvalues":["y","n"]},
+            {"section":0, "index":12, "key":"compresstype", "desc":"The type of compression used, if compression is enabled", "value":"gz", "acceptedvalues":["gz","tar-gz", "tar-bz2"]},            
             {"section":0, "index":6, "key":"fileformat", "desc":"The format of the file generated (csv or xls)", "value":"csv", "acceptedvalues":["csv","xls"]},
             {"section":1, "index":7, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
             {"section":1, "index":8, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
@@ -60,6 +61,7 @@ class Settings():
         self.columnfile = self.get_setting_value("columnfile")
         self.columnfolder = self.get_setting_value("columnfolder")
         self.compress = self.get_setting_value("compress")
+        self.compresstype = self.get_setting_value("compresstype")
         self.fileformat = self.get_setting_value("fileformat")
         self.numberofrows = self.get_setting_value("numberofrows")
         self.rownumber = self.get_setting_value("rownumber")
@@ -230,39 +232,49 @@ def view_setting_group(section, notification = ""): # displays all the settings 
 def view_one_setting(index): # displays a selected setting in the terminal and provides the user with more options for the particular setting
     option = ""
     notification = ""
+    selectedindex = 0
+
+    for y in range (0, len(settings.json)):
+        if settings.json[y]["index"] == index:
+            selectedindex = y
 
     while option != "q" or option != "b":
         clear()
 
-        print("Setting number " + str(index) + ": \n")
-        print("----------\nDescription: " + settings.json[index - 1]["desc"])
-        print("Value: " + (settings.json[index - 1]["value"] if settings.json[index - 1]["value"] != "" else "<no value>") + "\n----------")
+        print("Setting " + str(selectedindex + 1) + ", index " + str(index) + ": \n")
+        print("----------\nDescription: " + settings.json[selectedindex]["desc"])
+        print("Value: " + (settings.json[selectedindex]["value"] if settings.json[selectedindex]["value"] != "" else "<no value>") + "\n----------")
+
+        if "acceptedvalues" in settings.json[selectedindex]:
+            print("\nThe following values are accepted for this setting:")
+            for acceptedvalue in settings.json[selectedindex]["acceptedvalues"]:
+                print(" - " + acceptedvalue)
 
         option = input(notification + "\n1. Edit setting value\nb. Go back\nq. Quit\n\nOption:")
 
         if option == "q":
             menu()
         elif option == "b":
-            view_setting_group(settings.json[index - 1]["section"])
+            view_setting_group(settings.json[selectedindex]["section"])
         elif option == "1":
-            if settings.json[index - 1]["key"] == "columnfile":
+            if settings.json[selectedindex]["key"] == "columnfile":
                 view_column_files("", "settings")
             else:
-                try:
-                    inputvalue = input("\nEnter new setting value:")
-                    if inputvalue in settings.json[index - 1]["acceptedvalues"]:
-                        settings.json[index - 1]["value"] = inputvalue
+                inputvalue = input("\nEnter new setting value:")
+                if "acceptedvalues" in settings.json[selectedindex]:
+                    if inputvalue in settings.json[selectedindex]["acceptedvalues"]:
+                        settings.json[selectedindex]["value"] = inputvalue
                         settings.update_settings()
 
-                        view_setting_group(settings.json[index - 1]["section"], "\nValue updated!\n")
+                        view_setting_group(settings.json[selectedindex]["section"], "\nValue updated!\n")
                     else:
-                        notification = "\nInvalid value...\nMust be one of the following: " + str(settings.json[index - 1]["acceptedvalues"]) + "\n"
-                except KeyError:
-                    settings.json[index - 1]["value"] = inputvalue
+                        notification = "\nInvalid value...\nMust be one of the following: " + str(settings.json[selectedindex]["acceptedvalues"]) + "\n"
+                else:
+                    settings.json[selectedindex]["value"] = inputvalue
                     settings.update_settings()
 
-                    logger.add_log_entry("Value for setting '" + settings.json[index - 1]["key"] + "' updated!", True)
-                    view_setting_group(settings.json[index - 1]["section"], "\nValue updated!\n")
+                    logger.add_log_entry("Value for setting '" + settings.json[selectedindex]["key"] + "' updated!", True)
+                    view_setting_group(settings.json[selectedindex]["section"], "\nValue updated!\n")
         else:
             notification = "\nInvalid option...\n"
 
@@ -670,16 +682,40 @@ def create_file(notification = ""): # creates and writes the file
             book.save(file)
 
         if settings.compress == "y":
-            logger.add_log_entry("Compressing generated file...")
-            print("\nCompressing generated file...")
+            if settings.compresstype == "gz":
+                logger.add_log_entry("Compressing generated file...")
+                print("\nCompressing generated file...")
 
-            with open(file, 'rb') as currentfile:
-                with gzip.open(file + '.gz', 'wb') as compressedfile:
-                    shutil.copyfileobj(currentfile, compressedfile)
+                with open(file, 'rb') as currentfile:
+                    with gzip.open(file + '.gz', 'wb') as compressedfile:
+                        shutil.copyfileobj(currentfile, compressedfile)
 
-            os.remove(file)
+                os.remove(file)
 
-            message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".gz'..."
+                message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".gz'..."
+            elif settings.compresstype == "tar-gz":
+                logger.add_log_entry("Compressing generated file...")
+                print("\nCompressing generated file...")
+
+                with open(file, 'rb') as currentfile:
+                    with tarfile.open(file + '.tar.gz', 'w:gz') as compressedfile:
+                        compressedfile.add(file)
+
+                os.remove(file)
+
+                message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".tar.gz'..."
+            elif settings.compresstype == "tar-bz2":
+                logger.add_log_entry("Compressing generated file...")
+                print("\nCompressing generated file...")
+
+                with open(file, 'rb') as currentfile:
+                    with tarfile.open(file + '.tar.bz2', 'w:bz2') as compressedfile:
+                        compressedfile.add(file)
+
+                os.remove(file)
+
+                message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".tar.bz2'..."
+
         else:
             message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows in '" + file + "'..."
 
@@ -715,7 +751,7 @@ def menu(notification = ""): # main menu, first thing the user will see
 
     if (settings.foldername != ""):
         if settings.filename != "":
-            filename = settings.foldername + "/" + settings.filename + ("." + settings.fileformat if settings.fileformat != "" else ".csv")
+            filename = settings.foldername + "/" + settings.filename + ("." + settings.fileformat if settings.fileformat != "" else ".csv") + ("." + settings.compresstype.replace("-",".") if settings.compress == "y" else "")
         else:
             filename = settings.foldername + "/<file name not specified>"
 
