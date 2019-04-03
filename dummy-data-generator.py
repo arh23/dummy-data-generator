@@ -103,29 +103,41 @@ class Settings():
                     print("ERROR - unknown setting specified in code!\n")
                     break
 
+    def get_setting_value_by_index(self, value): # gets a setting value for the provided index
+        for x in range (0, len(self.json)):
+            if self.json[x]["index"] == value:
+                settingvalue = self.json[x]["value"]
+        
+        return settingvalue
+
+    def get_all_values(self): # gets all setting values
+        settingvalues = [None] * (len(self.json) + 1)
+
+        for setting in self.json:
+            settingvalues[int(setting["index"])] = setting["value"]
+
+        return settingvalues
+
     def update_settings(self): # saves all changes to the settings in the settings json file
         with open('settings.json', "w") as jsonfile:
             jsonfile.write(json.dumps(self.json, indent=4))
 
         self.update_values()
 
-    def update_settings_file(self): # updates settings (excluding values) and adds new settings tothe settings file at start up, based on the default
-        for x in range (0, len(self.defaultsettings)):
+    def update_settings_file(self): # updates settings (excluding values), adds new settings, and removes old/removed settings from settings.json
+        values = self.get_all_values()
+        self.json = self.defaultsettings
+        count = 0
+
+        for setting in self.json:
             try:
-                if self.json[x]["section"] != self.defaultsettings[x]["section"]:
-                    self.json[x]["section"] = self.defaultsettings[x]["section"]
-
-                if self.json[x]["index"] != self.defaultsettings[x]["index"]:
-                    self.json[x]["index"] = self.defaultsettings[x]["index"]
-
-                if self.json[x]["key"] != self.defaultsettings[x]["key"]:
-                    self.json[x]["key"] = self.defaultsettings[x]["key"]
-
-                if self.json[x]["desc"] != self.defaultsettings[x]["desc"]:
-                    self.json[x]["desc"] = self.defaultsettings[x]["desc"]
-
+                self.json[count]["value"] = values[int(setting["index"])]
             except IndexError:
-                self.json.append(self.defaultsettings[x])
+                if len(self.json) > len(values):
+                    while len(self.json) > len(values):
+                        values.insert(len(values), self.get_setting_value_by_index(len(values)))
+
+            count += 1
 
         self.update_settings()
 
