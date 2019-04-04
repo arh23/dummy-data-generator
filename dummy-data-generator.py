@@ -1,5 +1,5 @@
 #! coding: utf-8
-import csv, random, time, json, os, sys, platform, datetime, gzip, zipfile, tarfile, shutil, xlwt
+import subprocess, csv, xlwt, random, time, json, os, sys, platform, datetime, gzip, zipfile, tarfile, shutil
 
 class Logger():
     def __init__(self):
@@ -653,6 +653,58 @@ def get_values(value, rownumber): # reads the value for each column, and process
         currentindex = currentindex + 1
     return output
 
+def get_demo_rows(notification = "", rownumber = None):
+    clear()
+
+    if rownumber == None:
+        rownumber = int(settings.rownumber)
+
+    headers = ["COLUMN NAME", ""]
+    maxheaderlength = 0
+
+    print("The following is an example of what can be generated for row " + str(rownumber + 1) +":\n")
+
+    for y in range (0, columns.get_columns_total()):
+        headers.append(columns.json[y]["name"])
+        if len(columns.json[y]["name"]) > int(maxheaderlength):
+            maxheaderlength = len(columns.json[y]["name"])
+
+    values = ["VALUE", ""]
+    border = ""
+
+    for bordercount in range (0, maxheaderlength + 2):
+        border += "-"
+
+    headers[1] = border
+    values[1] = border
+
+    for z in range (1, 2):
+        for x in range (0, columns.get_columns_total()):
+            values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
+
+    for z in range (0, len(headers)):
+        if len(headers[z]) < maxheaderlength:
+            while len(headers[z]) < maxheaderlength:
+                headers[z] = headers[z] + " "
+
+        if z == 1:
+            print(headers[z] + "+" + values[z])
+        else:           
+            print(headers[z] + "  |  " + values[z])
+
+    option = input(notification + "\nEnter a number to view the example at that row, or: \n+. Increase row number\n-. Decrease row number\nq. Quit\n\nOption:")
+
+    if option == "q":
+        menu()
+    elif option == "+":
+        get_demo_rows("", rownumber + 1)
+    elif option == "-":
+        get_demo_rows("", rownumber - 1)
+    elif option.isdigit():
+        get_demo_rows("", int(option) - 1)
+    else:
+        get_demo_rows("", rownumber) 
+
 def create_file(notification = ""): # creates and writes the file
     try:
         clear()
@@ -792,12 +844,13 @@ def menu(notification = ""): # main menu, first thing the user will see
     columns.get_columns()
     valuelist.reset_index()
 
-    print("Dummy data generator v" + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\nCurrent column file: " + columnfile + "\n" + ("Logging enabled\n" if settings.log == "y" else "") + notification)
+    print("Dummy data generator " + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\nCurrent column file: " + columnfile + "\n" + ("Logging enabled\n" if settings.log == "y" else "") + notification)
 
     print("1. Generate file")
-    print("2. Add and edit columns")
-    print("3. View column files")
-    print("4. Settings")
+    print("2. View example row")
+    print("3. Add and edit columns")
+    print("4. View column files")
+    print("5. Settings")
     print("q. Quit")
 
     option = input("\nEnter option: ")
@@ -805,17 +858,19 @@ def menu(notification = ""): # main menu, first thing the user will see
     if option == "1":
         create_file()
     elif option == "2":
-        view_columns()
+        get_demo_rows()
     elif option == "3":
-        view_column_files()
+        view_columns()
     elif option == "4":
+        view_column_files()
+    elif option == "5":
         view_settings()
     elif option == "q":
         exit()
     else:
         menu("\nInvalid option...\n")
 
-version = "0.8.0"
+version = "v0.8.0-" + str(subprocess.check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip())[:7]
 
 settings.update_settings_file()
 menu()
