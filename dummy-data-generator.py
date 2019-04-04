@@ -1,5 +1,5 @@
 #! coding: utf-8
-import csv, random, time, json, os, sys, platform, datetime, gzip, tarfile, shutil, xlwt
+import csv, random, time, json, os, sys, platform, datetime, gzip, zipfile, tarfile, shutil, xlwt
 
 class Logger():
     def __init__(self):
@@ -44,8 +44,9 @@ class Settings():
             {"section":0, "index":3, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
             {"section":0, "index":4, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
             {"section":0, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation y/n", "value":"n", "acceptedvalues":["y","n"]},
-            {"section":0, "index":12, "key":"compresstype", "desc":"The type of compression used, if compression is enabled", "value":"gz", "acceptedvalues":["gz","tar-gz", "tar-bz2"]},            
+            {"section":0, "index":12, "key":"compresstype", "desc":"The type of compression used, if compression is enabled", "value":"gz", "acceptedvalues":["gz", "zip", "tar-gz", "tar-bz2"]},            
             {"section":0, "index":6, "key":"fileformat", "desc":"The format of the file generated (csv or xls)", "value":"csv", "acceptedvalues":["csv","xls"]},
+            {"section":0, "index":13, "key":"sheetname", "desc":"The name of the sheet generated in xls files (defaults to 'sheet' if blank)", "value":""},            
             {"section":1, "index":7, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
             {"section":1, "index":8, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
             {"section":1, "index":9, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
@@ -63,6 +64,7 @@ class Settings():
         self.compress = self.get_setting_value("compress")
         self.compresstype = self.get_setting_value("compresstype")
         self.fileformat = self.get_setting_value("fileformat")
+        self.sheetname = self.get_setting_value("sheetname")
         self.numberofrows = self.get_setting_value("numberofrows")
         self.rownumber = self.get_setting_value("rownumber")
         self.min = self.get_setting_value("min")
@@ -693,8 +695,8 @@ def create_file(notification = ""): # creates and writes the file
                 writer.writerows([headers])
 
                 values = []
-                logger.add_log_entry("Generating values from: " + str(columns.json))
 
+                logger.add_log_entry("Generating values from: " + str(columns.json))
                 for z in range (1, int(rows) + 1):
                     for x in range (0, columns.get_columns_total()):
                         values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
@@ -702,55 +704,25 @@ def create_file(notification = ""): # creates and writes the file
                     writer.writerows([values])
 
                     values = []
+
         elif settings.fileformat == "xls":
             book = xlwt.Workbook()
-            sh = book.add_sheet("sheet")
+            sheetname = (settings.sheetname if settings.sheetname != "" else "sheet")
+            sheet = book.add_sheet(sheetname)
 
             for y in range (0, columns.get_columns_total()):
-                sh.write(0, y, columns.json[y]["name"])
+                sheet.write(0, y, columns.json[y]["name"])
 
             for z in range (1, int(rows) + 1):
                 for x in range (0, columns.get_columns_total()):
-                    sh.write(z, x, get_values(columns.json[x]["value"], int(rownumber) + z))
+                    sheet.write(z, x, get_values(columns.json[x]["value"], int(rownumber) + z))
 
             logger.add_log_entry("Writing xls file.")
             book.save(file)
 
         if settings.compress == "y":
-            if settings.compresstype == "gz":
-                logger.add_log_entry("Compressing generated file...")
-                print("\nCompressing generated file...")
-
-                with open(file, 'rb') as currentfile:
-                    with gzip.open(file + '.gz', 'wb') as compressedfile:
-                        shutil.copyfileobj(currentfile, compressedfile)
-
-                os.remove(file)
-
-                message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".gz'..."
-            elif settings.compresstype == "tar-gz":
-                logger.add_log_entry("Compressing generated file...")
-                print("\nCompressing generated file...")
-
-                with open(file, 'rb') as currentfile:
-                    with tarfile.open(file + '.tar.gz', 'w:gz') as compressedfile:
-                        compressedfile.add(file)
-
-                os.remove(file)
-
-                message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".tar.gz'..."
-            elif settings.compresstype == "tar-bz2":
-                logger.add_log_entry("Compressing generated file...")
-                print("\nCompressing generated file...")
-
-                with open(file, 'rb') as currentfile:
-                    with tarfile.open(file + '.tar.bz2', 'w:bz2') as compressedfile:
-                        compressedfile.add(file)
-
-                os.remove(file)
-
-                message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + ".tar.bz2'..."
-
+            compress_file(file)
+            message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + "." + settings.compresstype.replace("-",".") + "'..."
         else:
             message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows in '" + file + "'..."
 
@@ -775,6 +747,30 @@ def create_file(notification = ""): # creates and writes the file
         logger.add_log_entry("Deleting file '" + file + "'...", True)
         
         menu("\nAn error occurred: " + str(err) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime)) 
+
+def compress_file(file): # compress the generated file, if compression is enabled
+    try:
+        logger.add_log_entry("Compressing generated file...")
+        print("\nCompressing generated file...")
+
+        with open(file, 'rb') as currentfile:
+            if settings.compresstype == "gz":
+                with gzip.open(file + '.gz', 'wb') as compressedfile:
+                    shutil.copyfileobj(currentfile, compressedfile)
+            elif settings.compresstype == "zip":
+                with zipfile.ZipFile(file + '.zip', 'w') as compressedfile:
+                    compressedfile.write(file)
+            elif settings.compresstype == "tar-gz":
+                with tarfile.open(file + '.tar.gz', 'w:gz') as compressedfile:
+                    compressedfile.add(file)
+            elif settings.compresstype == "tar-bz2":
+                with tarfile.open(file + '.tar.bz2', 'w:bz2') as compressedfile:
+                    compressedfile.add(file)
+
+        os.remove(file)
+    except Exception as err:
+        logger.add_log_entry("ERROR - " + str(err) + "\n", True)
+        menu("\nAn error occurred during compression: " + str(err) + "\n")
 
 def menu(notification = ""): # main menu, first thing the user will see
     clear()
