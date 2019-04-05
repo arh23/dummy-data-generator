@@ -653,75 +653,114 @@ def get_values(value, rownumber): # reads the value for each column, and process
         currentindex = currentindex + 1
     return output
 
-def get_demo_rows(notification = "", rownumber = None):
-    clear()
 
-    if rownumber == None:
-        rownumber = int(settings.rownumber)
+def get_demo_rows(notification = "", rownumber = None): # generates and prints one row to the terminal, using the currently selected columns file
+    try:
+        clear()
+        currentcolumn = 0
 
-    headers = ["COLUMN NAME", ""]
-    maxheaderlength = 0
+        maxheaderlength = 0
+        maxvaluelength = 0
+        maxvaluecolumnlength = 0
 
-    print("The following is an example of what can be generated for row " + str(rownumber + 1) +":\n")
+        if rownumber == None:
+            rownumber = int(settings.rownumber)
 
-    for y in range (0, columns.get_columns_total()):
-        headers.append(columns.json[y]["name"])
-        if len(columns.json[y]["name"]) > int(maxheaderlength):
-            maxheaderlength = len(columns.json[y]["name"])
+        print("The following is an example of what can be generated for row " + str(rownumber + 1) +":\n")
 
-    values = ["VALUE", ""]
-    border = ""
+        headers = ["COLUMN NAME", ""]
+        
+        for y in range (0, columns.get_columns_total()):
+            headers.append(columns.json[y]["name"])
 
-    for bordercount in range (0, maxheaderlength + 2):
-        border += "-"
+        values = ["GENERATED VALUE", ""]
 
-    headers[1] = border
-    values[1] = border
+        for z in range (1, 2):
+            for x in range (0, columns.get_columns_total()):
+                values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
 
-    for z in range (1, 2):
+                currentcolumn += 1
+
+        colvalues = ["COLUMN VALUE", ""]
+
         for x in range (0, columns.get_columns_total()):
-            values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
+            colvalues.append(columns.json[x]["value"])
 
-    for z in range (0, len(headers)):
-        if len(headers[z]) < maxheaderlength:
-            while len(headers[z]) < maxheaderlength:
-                headers[z] = headers[z] + " "
+        for z in range (0, len(headers)):
+            if len(headers[z]) > int(maxheaderlength):
+                maxheaderlength = len(headers[z])
 
-        if z == 1:
-            print(headers[z] + "+" + values[z])
-        else:           
-            print(headers[z] + "  |  " + values[z])
+            if len(values[z]) > int(maxvaluelength):
+                maxvaluelength = len(values[z])
 
-    option = input(notification + "\nEnter a number to view the example at that row, or: \n+. Increase row number\n-. Decrease row number\nq. Quit\n\nOption:")
+            if len(colvalues[z]) > int(maxvaluecolumnlength):
+                maxvaluecolumnlength = len(colvalues[z])
 
-    if option == "q":
-        menu()
-    elif option == "+":
-        get_demo_rows("", rownumber + 1)
-    elif option == "-":
-        get_demo_rows("", rownumber - 1)
-    elif option.isdigit():
-        get_demo_rows("", int(option) - 1)
-    else:
-        get_demo_rows("", rownumber) 
+        border = ""
+        for bordercount in range (0, maxheaderlength + 2):
+            border += "-"
+
+        headers[1] = border
+
+        border = ""
+        for bordercount in range (0, maxvaluelength + 4):
+            border += "-"
+
+        values[1] = border
+
+        border = ""
+        for bordercount in range (0, maxvaluecolumnlength + 4):
+            border += "-"
+
+        colvalues[1] = border
+
+        for z in range (0, len(headers)):
+            if len(headers[z]) < maxheaderlength:
+                while len(headers[z]) < maxheaderlength:
+                    headers[z] = headers[z] + " "
+
+            if len(values[z]) < maxvaluelength:
+                while len(values[z]) < maxvaluelength:
+                    values[z] = values[z] + " "
+
+            if len(colvalues[z]) < maxvaluecolumnlength:
+                while len(colvalues[z]) < maxvaluecolumnlength:
+                    colvalues[z] = colvalues[z] + " "
+
+            if z == 1:
+                print(headers[z] + "+" + values[z] + "+" + colvalues[z])
+            else:           
+                print(headers[z] + "  |  " + values[z] + "  |  " + colvalues[z])
+
+        option = input(notification + "\nEnter a number to view the example at that row, or: \n+. Increase row number\n-. Decrease row number\nq. Quit\n\nOption:")
+
+        if option == "q":
+            menu()
+        elif option == "+":
+            get_demo_rows("", rownumber + 1)
+        elif option == "-":
+            get_demo_rows("", rownumber - 1)
+        elif option.isdigit():
+            get_demo_rows("", int(option) - 1)
+        else:
+            get_demo_rows("", rownumber) 
+    except ValueError as err:
+        menu("\nAn error occurred during generation of example data: Invalid value specified for column " + str(currentcolumn + 1) + " - " + str(columns.json[currentcolumn]) + "\n")     
 
 def create_file(notification = ""): # creates and writes the file
     try:
         clear()
-        
-        currentcolumn = 0
 
         if settings.numberofrows == "":
             settings.numberofrows = input(notification + "Enter the number of rows to generate (or enter 'q' or 'b' to go back to the menu): ")
+            clear()
 
-        rows = settings.numberofrows
         file = get_filename()
         folder = settings.foldername
-        rownumber = settings.rownumber
 
-        if rows == "q" or rows == "b":
+        if settings.numberofrows == "q" or settings.numberofrows == "b":
             menu()
-        elif rows.isdigit() == False and (rows != 'q' or rows != 'b'):
+        elif settings.numberofrows.isdigit() == False and (settings.numberofrows != 'q' or settings.numberofrows != 'b'):
             settings.numberofrows = ""
             create_file("Please enter a number...\n\n")
 
@@ -729,8 +768,38 @@ def create_file(notification = ""): # creates and writes the file
             if os.path.exists(folder + "/") == False:
                 os.makedirs(folder + "/")
 
-        logger.add_log_entry("Creating file...")
-        print("Creating file...")
+        timetaken = write_file(file)
+
+        if settings.compress == "y":
+            compress_file(file)
+            message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate " + "{0:,}".format(int(settings.numberofrows)) + " rows and compress '" + file + "." + settings.compresstype.replace("-",".") + "'..."
+        else:
+            message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate " + "{0:,}".format(int(settings.numberofrows)) + " rows in '" + file + "'..."
+
+        logger.add_log_entry(message, True)
+        menu("\n" + message + "\n")
+
+    except FileNotFoundError as err:
+        settings.foldername = file[0:file.rfind("/")]
+        settings.filename = settings.filename[settings.filename.rfind("/") + 1:len(settings.filename)]
+
+        create_file()
+    except Exception as err:
+        logger.add_log_entry("ERROR - " + str(err))
+        
+        try:
+            os.remove(file)
+            logger.add_log_entry("Deleting file '" + file + "'...", True)
+        except Exception:
+            pass
+
+        menu("\nAn error occurred during file creation: " + str(err) + "\n") 
+
+def write_file(file):
+    currentcolumn = 0
+    try:
+        logger.add_log_entry("Generating file...")
+        print("Generating file...")
 
         starttime = time.time()
 
@@ -749,9 +818,10 @@ def create_file(notification = ""): # creates and writes the file
                 values = []
 
                 logger.add_log_entry("Generating values from: " + str(columns.json))
-                for z in range (1, int(rows) + 1):
+                for z in range (1, int(settings.numberofrows) + 1):
                     for x in range (0, columns.get_columns_total()):
-                        values.append(get_values(columns.json[x]["value"], int(rownumber) + z))
+                        values.append(get_values(columns.json[x]["value"], int(settings.rownumber) + z))
+                        currentcolumn += 1
 
                     writer.writerows([values])
 
@@ -762,43 +832,30 @@ def create_file(notification = ""): # creates and writes the file
             sheetname = (settings.sheetname if settings.sheetname != "" else "sheet")
             sheet = book.add_sheet(sheetname)
 
+            logger.add_log_entry("Writing headers into xls file.")
             for y in range (0, columns.get_columns_total()):
                 sheet.write(0, y, columns.json[y]["name"])
 
-            for z in range (1, int(rows) + 1):
+            logger.add_log_entry("Generating values from: " + str(columns.json))
+            for z in range (1, int(settings.numberofrows) + 1):
                 for x in range (0, columns.get_columns_total()):
-                    sheet.write(z, x, get_values(columns.json[x]["value"], int(rownumber) + z))
+                    sheet.write(z, x, get_values(columns.json[x]["value"], int(settings.rownumber) + z))
 
             logger.add_log_entry("Writing xls file.")
             book.save(file)
 
-        if settings.compress == "y":
-            compress_file(file)
-            message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows and compress '" + file + "." + settings.compresstype.replace("-",".") + "'..."
-        else:
-            message = "Took %.2f seconds" % (time.time() - starttime) + " to generate " + "{0:,}".format(int(rows)) + " rows in '" + file + "'..."
-
-        logger.add_log_entry(message, True)
-        menu("\n" + message + "\n")
+        return (time.time() - starttime)
+    
     except ValueError as err:
-        logger.add_log_entry("ERROR - Invalid value specified for column " + str(currentcolumn) + " - " + str(columns.json[currentcolumn - 1]) +", took %.2f seconds before failing." % (time.time() - starttime), True)
-        
-        os.remove(file)
-        logger.add_log_entry("Deleting file '" + file + "'...", True)
+        logger.add_log_entry("ERROR - Invalid value specified for column " + str(currentcolumn + 1) + " - " + str(columns.json[currentcolumn]) +", took %.2f seconds before failing." % (time.time() - starttime), True)
 
-        menu("\nAn error occurred: Invalid value specified for column " + str(currentcolumn) + " - " + str(columns.json[currentcolumn - 1]) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime)) 
-    except FileNotFoundError as err:
-        settings.foldername = file[0:file.rfind("/")]
-        settings.filename = settings.filename[settings.filename.rfind("/") + 1:len(settings.filename)]
+        try:
+            os.remove(file)
+            logger.add_log_entry("Deleting file '" + file + "'...", True)
+        except Exception:
+            pass
 
-        create_file()
-    except Exception as err:
-        logger.add_log_entry("ERROR - " + str(err) + "\nTook %.2f seconds before failing." % (time.time() - starttime), True)
-        
-        os.remove(file)
-        logger.add_log_entry("Deleting file '" + file + "'...", True)
-        
-        menu("\nAn error occurred: " + str(err) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime)) 
+        menu("\nAn error occurred during file generation: Invalid value specified for column " + str(currentcolumn + 1) + " - " + str(columns.json[currentcolumn]) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime))     
 
 def compress_file(file): # compress the generated file, if compression is enabled
     try:
@@ -848,8 +905,8 @@ def menu(notification = ""): # main menu, first thing the user will see
 
     print("1. Generate file")
     print("2. View example row")
-    print("3. Add and edit columns")
-    print("4. View column files")
+    print("3. View column files")
+    print("4. Add and edit columns")
     print("5. Settings")
     print("q. Quit")
 
@@ -860,9 +917,9 @@ def menu(notification = ""): # main menu, first thing the user will see
     elif option == "2":
         get_demo_rows()
     elif option == "3":
-        view_columns()
-    elif option == "4":
         view_column_files()
+    elif option == "4":
+        view_columns()
     elif option == "5":
         view_settings()
     elif option == "q":
