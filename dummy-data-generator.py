@@ -929,5 +929,7 @@ def menu(notification = ""): # main menu, first thing the user will see
 
 version = "v0.8.0-" + str(subprocess.check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip())[:7]
 
+print("Loading...")
+
 settings.update_settings_file()
 menu()
