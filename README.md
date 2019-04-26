@@ -42,7 +42,15 @@ You can use various placeholders to generate random or incremental data, for exa
 
 - *test value [1,2,3]* - this will generate fixed text with a value selected from within the square brackets. The commas separate the values, and represent that this is "ordered", meaning that "1" will be picked first, then "2" etc. Once the end of the list is reached, it will loop back to the start.
 
+- *test value [(10,20)|(80,100)|(200,300)]* - this will generate fixed text with a random value that has been generated using the specified ranges. The values are generated from the specified ranges, and are then selected at random.
+
+- *test value [(10,20),(80,100),(200,300)]* - this will generate fixed text with a range value selected from within the square brackets. As per the above, the values are generated from the specified ranges, and are then selected in order. 
+
 Columns can also be added and deleted via the script.
+
+#### Example row
+
+You can view an example row (at any number) for the currently selected column file. This will allow you to view what the rows generated will contain. You can change the row number with the + or - keys, or enter a row number to jump to.
 
 #### File
 
@@ -82,9 +90,13 @@ A settings file (*settings.json*) is also created when the script has been run f
 
 - Name of the folder where the columns are stored - set to "columns" by default. If left blank, the script will create and/or use the columns file in the same location as the script.
 
-- Allow the script to compress the file after generation - set to "n" by default. Compressed to *.gz* only at this time.
+- Allow the script to compress the file after generation - set to "n" by default.
 
-- Format of the file being genereated - set to "csv" by default. Can accept either "xls" or "csv" at this time.
+- Type of file compression if the compression is toggled. Can compress to *gz*, *zip*, *tar-gz* and *tar-bz2*.
+
+- Format of the file being generated - set to "csv" by default. Can accept either *xls* or *csv* at this time.
+
+- Name of the sheet created in *xls* files - defaults to "sheet" if blank.
 
 - The number of rows to generate - this value is unset by default. The script will ask the user to input the desired number of rows before generation per generation, if unset.
 
