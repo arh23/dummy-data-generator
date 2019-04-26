@@ -207,7 +207,19 @@ class ValueList():
     def reset_index(self): # resets the index, to correctly count from the start of the current list again
         self.listindex = -1
 
-valuelist = ValueList()
+class MultiValue():
+    def __init__(self):
+        self.valuelists = {}
+
+    def add_list(self, key):
+        if key not in self.valuelists:
+            self.valuelists[key] = ValueList()
+
+    def reset_indexes(self):
+        for valuelist in self.valuelists:
+            self.valuelists[valuelist].reset_index()
+
+valuedict = MultiValue()
 
 def clear(platformname = sys.platform): # clear the terminal buffer ~ NOTE: this seems to be quite buggy, need to come back to this
     if platformname == "win32":
@@ -610,15 +622,17 @@ def get_values(value, rownumber): # reads the value for each column, and process
                     break
 
         elif value[currentindex] == "[":
+            valuedict.add_list(value)
             values = []
             tempstring = ""
             randomlist = False
             orderedlist = False
+            innervalue = False
 
             while True:
                 currentindex = currentindex + 1
 
-                if value[currentindex] == "|" or value[currentindex] == ",":
+                if value[currentindex] == "|" or (value[currentindex] == "," and innervalue == False):
                     values.append(tempstring)
                     tempstring = ""
 
@@ -631,18 +645,24 @@ def get_values(value, rownumber): # reads the value for each column, and process
 
                 elif value[currentindex] == "]":
                     values.append(tempstring)
-                    valuelist.set_list(values)
+                    valuedict.valuelists[value].set_list(values)
                     values = []
 
                     if randomlist:
-                        output = output + valuelist.get_random_list_value()
+                        output = output + valuedict.valuelists[value].get_random_list_value()
                     elif orderedlist:
-                        output = output + valuelist.get_next_list_value()
+                        output = output + valuedict.valuelists[value].get_next_list_value()
 
                     break
-                    
+                
                 else:
                     tempstring = tempstring + value[currentindex]
+
+                    if value[currentindex] == "(":
+                        innervalue = True
+                    if value[currentindex] == ")":
+                        tempstring = get_values(tempstring, rownumber)
+                        innervalue = False
 
         elif value[currentindex] == "+":
             output = output + str(rownumber)
@@ -652,7 +672,6 @@ def get_values(value, rownumber): # reads the value for each column, and process
             output = output + value[currentindex]
         currentindex = currentindex + 1
     return output
-
 
 def get_demo_rows(notification = "", rownumber = None): # generates and prints one row to the terminal, using the currently selected columns file
     try:
@@ -899,7 +918,7 @@ def menu(notification = ""): # main menu, first thing the user will see
         columnfile = settings.columnfolder + "/" + settings.columnfile
 
     columns.get_columns()
-    valuelist.reset_index()
+    valuedict.reset_indexes()
 
     print("Dummy data generator " + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\nCurrent column file: " + columnfile + "\n" + ("Logging enabled\n" if settings.log == "y" else "") + notification)
 
@@ -927,7 +946,7 @@ def menu(notification = ""): # main menu, first thing the user will see
     else:
         menu("\nInvalid option...\n")
 
-version = "v0.8.0-" + str(subprocess.check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip())[:7]
+version = "v0.9.0-" + str(subprocess.check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip())[:7]
 
 print("Loading...")
 
