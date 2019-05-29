@@ -350,7 +350,7 @@ def view_column_files(notification = "", prevstate = "menu"): # displays the col
             print(str(y + 1) + ". " + fileslist[y])
 
         if len(fileslist) == 1:
-            option = input(notification + "\nEnter d to duplicate the current column file, or q to quit.\n\nOption:")
+            option = input(notification + "\n+. Add a column file\nx. Delete a column file\nd. Duplicate the current column file\nq. Quit\n\nOption:")
 
             if option == "q":
                 if prevstate == "menu":
@@ -359,16 +359,33 @@ def view_column_files(notification = "", prevstate = "menu"): # displays the col
                     view_settings()
                 else:
                     menu()
+            elif option == "+":
+                columnfilename = input("\nEnter the name of the new column file (excluding file extension): ")
+
+                for y in range (0, len(settings.json)):
+                    if settings.json[y]["key"] == "columnfile":
+                        settings.json[y]["value"] = columnfilename + ".json"
+                        settings.update_settings()
+
+                settings.update_settings()
+                columns.get_columns()
+                notification = "\nCreated and selected new column file " + columnfilename + ".json...\n"
             elif option == "d":
                 if input("\nAre you sure you want to duplicate the current columns file? y/n: ") == "y":
                     duplicatename = input("Enter name for duplicated file (do not include extension): ") + ".json"
-                    shutil.copy(settings.columnfolder + "/" + settings.columnfile, settings.columnfolder + "/" + duplicatename)
 
-                    for y in range (0, len(settings.json)):
-                        if settings.json[y]["key"] == "columnfile":
-                            settings.json[y]["value"] = duplicatename
-                            settings.update_settings()
-                            notification = "\nSelected the new duplicate column file, " + duplicatename + "...\n"
+                    try:
+                        shutil.copy(settings.columnfolder + "/" + settings.columnfile, settings.columnfolder + "/" + duplicatename)
+
+                        for y in range (0, len(settings.json)):
+                            if settings.json[y]["key"] == "columnfile":
+                                settings.json[y]["value"] = duplicatename
+                                settings.update_settings()
+                                notification = "\nSelected the new duplicate column file, " + duplicatename + "...\n"
+                    except shutil.SameFileError:
+                        notification = "\nColumn file with the name '" + duplicatename +"' already exists.\n"
+                    except Exception:
+                        notification = "\nAn unknown error occurred when duplicating the columns file.\n"
             else:
                 notification = "\nThe only available column file has already been selected...\n"
         else:
@@ -412,13 +429,19 @@ def view_column_files(notification = "", prevstate = "menu"): # displays the col
             elif option == "d":
                 if input("\nAre you sure you want to duplicate the current columns file? y/n: ") == "y":
                     duplicatename = input("Enter name for duplicated file (do not include extension): ") + ".json"
-                    shutil.copy(settings.columnfolder + "/" + settings.columnfile, settings.columnfolder + "/" + duplicatename)
 
-                    for y in range (0, len(settings.json)):
-                        if settings.json[y]["key"] == "columnfile":
-                            settings.json[y]["value"] = duplicatename
-                            settings.update_settings()
-                            notification = "\nSelected the new duplicate column file, " + duplicatename + "...\n"
+                    try:
+                        shutil.copy(settings.columnfolder + "/" + settings.columnfile, settings.columnfolder + "/" + duplicatename)
+
+                        for y in range (0, len(settings.json)):
+                            if settings.json[y]["key"] == "columnfile":
+                                settings.json[y]["value"] = duplicatename
+                                settings.update_settings()
+                                notification = "\nSelected the new duplicate column file, " + duplicatename + "...\n"
+                    except shutil.SameFileError:
+                        notification = "\nColumn file with the name '" + duplicatename +"' already exists.\n"
+                    except Exception:
+                        notification = "\nAn unknown error occurred when duplicating the columns file.\n"
             elif option.isdigit():
                 if int(option) <= len(fileslist):
                     for y in range (0, len(settings.json)):
