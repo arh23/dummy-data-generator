@@ -350,7 +350,7 @@ def view_column_files(notification = "", prevstate = "menu"): # displays the col
             print(str(y + 1) + ". " + fileslist[y])
 
         if len(fileslist) == 1:
-            option = input(notification + "\nEnter q to quit.\n\nOption:")
+            option = input(notification + "\nEnter d to duplicate the current column file, or q to quit.\n\nOption:")
 
             if option == "q":
                 if prevstate == "menu":
@@ -359,10 +359,20 @@ def view_column_files(notification = "", prevstate = "menu"): # displays the col
                     view_settings()
                 else:
                     menu()
+            elif option == "d":
+                if input("\nAre you sure you want to duplicate the current columns file? y/n: ") == "y":
+                    duplicatename = input("Enter name for duplicated file (do not include extension): ") + ".json"
+                    shutil.copy(settings.columnfolder + "/" + settings.columnfile, settings.columnfolder + "/" + duplicatename)
+
+                    for y in range (0, len(settings.json)):
+                        if settings.json[y]["key"] == "columnfile":
+                            settings.json[y]["value"] = duplicatename
+                            settings.update_settings()
+                            notification = "\nSelected the new duplicate column file, " + duplicatename + "...\n"
             else:
                 notification = "\nThe only available column file has already been selected...\n"
         else:
-            option = input(notification + "\nEnter a file number (1 to " + str(len(fileslist)) + ") to select the column for use, or:\n+. Add a column file\nx. Delete a column file\nq. Quit\n\nOption:")
+            option = input(notification + "\nEnter a file number (1 to " + str(len(fileslist)) + ") to select the column for use, or:\n+. Add a column file\nx. Delete a column file\nd. Duplicate the current column file\nq. Quit\n\nOption:")
 
             if option == "q":
                 if prevstate == "menu":
@@ -399,6 +409,16 @@ def view_column_files(notification = "", prevstate = "menu"): # displays the col
                     notification = "\nDeleted column file " + columnfilename + "... " + subnotif
                 else:
                     notification = "\nFile " + columnfilename + " does not exist... " + subnotif
+            elif option == "d":
+                if input("\nAre you sure you want to duplicate the current columns file? y/n: ") == "y":
+                    duplicatename = input("Enter name for duplicated file (do not include extension): ") + ".json"
+                    shutil.copy(settings.columnfolder + "/" + settings.columnfile, settings.columnfolder + "/" + duplicatename)
+
+                    for y in range (0, len(settings.json)):
+                        if settings.json[y]["key"] == "columnfile":
+                            settings.json[y]["value"] = duplicatename
+                            settings.update_settings()
+                            notification = "\nSelected the new duplicate column file, " + duplicatename + "...\n"
             elif option.isdigit():
                 if int(option) <= len(fileslist):
                     for y in range (0, len(settings.json)):
