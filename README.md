@@ -106,7 +106,7 @@ A settings file (*settings.json*) is also created when the script has been run f
 
 - Type of file compression if the compression is toggled. Can compress to *gz*, *zip*, *tar-gz* and *tar-bz2*.
 
-- Format of the file being generated - set to "csv" by default. Can accept either *xls* or *csv* at this time.
+- Format of the file being generated - set to "csv" by default. Can accept either *xls*, *csv*, *png*, *jpg* or *ico* at this time.
 
 - Name of the sheet created in *xls* files - defaults to *sheet* if blank.
 
