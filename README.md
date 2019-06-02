@@ -1,6 +1,6 @@
 # dummy-data-generator
 
-Generate multiple rows of dummy/test data using template values.
+Generate multiple rows of dummy/test data using template values. Can also be used to generate test images.
 
 ## Documentation
 
@@ -52,6 +52,18 @@ Columns can also be added and deleted via the script.
 
 You can view an example row (at any number) for the currently selected column file. This will allow you to view what the rows generated will contain. You can change the row number with the + or - keys, or enter a row number to jump to.
 
+#### Images
+
+The script can also be used to generate test images. These images are generated using RGB values, and are generated based on a number of generation modes, including:
+
+- *random* - every pixel is a random colour, based on the minimum and maximum red, green and blue values specified in the settings.
+
+- *single* - every pixel is the same colour, based on the maximum red, green and blue values only.
+
+- *row* - generates rows of the same colour, based on the minimum and maximum red, green and blue values, and the row height, all of which are specified in the settings.
+
+Resolution, as well as image file formats can be set in settings. See the settings section for supported formats.
+
 #### File
 
 The user is able to specify the file name, and can opt to have the file compressed after generation.
@@ -82,13 +94,13 @@ Files can be generated and compressed. This must be enabled in the settings. At 
 
 A settings file (*settings.json*) is also created when the script has been run for the first time. Currently, the following can be changed via the settings:
 
-- Default name of files generated - set to "data.csv" by default. If left blank, there will be a prompt to enter a file name before a file is generated.
+- Default name of files generated - set to *data.csv* by default. If left blank, there will be a prompt to enter a file name before a file is generated.
 
-- Name of folder where generated files are located - set to "generated-data" by default. If left blank, the files will generate in the same location as the script.
+- Name of folder where generated files are located - set to *generated-data* by default. If left blank, the files will generate in the same location as the script.
 
-- Name of the JSON file being used to load the columns - set to "columns.json" by default. If the file does not exist, it will be created with default columns.
+- Name of the JSON file being used to load the columns - set to *columns.json* by default. If the file does not exist, it will be created with default columns.
 
-- Name of the folder where the columns are stored - set to "columns" by default. If left blank, the script will create and/or use the columns file in the same location as the script.
+- Name of the folder where the columns are stored - set to *columns* by default. If left blank, the script will create and/or use the columns file in the same location as the script.
 
 - Allow the script to compress the file after generation - set to "n" by default.
 
@@ -96,13 +108,21 @@ A settings file (*settings.json*) is also created when the script has been run f
 
 - Format of the file being generated - set to "csv" by default. Can accept either *xls* or *csv* at this time.
 
-- Name of the sheet created in *xls* files - defaults to "sheet" if blank.
+- Name of the sheet created in *xls* files - defaults to *sheet* if blank.
 
 - The number of rows to generate - this value is unset by default. The script will ask the user to input the desired number of rows before generation per generation, if unset.
 
 - Index value where the script starts counting from when creating rows - set to 0 by default. The value is not inclusive, counts will start at value + 1.
 
-- The minimum and maximum values generated when using the '?' placeholder for the column value - default minimum is 1 and default maximum is 1,000,000.
+- The minimum and maximum values generated when using the "?" placeholder for the column value - default minimum is 1 and default maximum is 1,000,000.
+
+- The way in which image files are generated. Accepts either *random*, *single* or *row* - set to *random* by default.
+
+- The width and height of the image in pixels - both of which are set to 100px by default.
+
+- The height of rows generated in *row* mode, in pixels - set to 1px by default
+
+- The minimum and maximum red, green, and blue values to use when generating colours - the minimum is set to 0, and maximum set to 255, by default. When using *single* mode, only the maximum values are used.
 
 - Allow the script to create a log, containing details of the generation - disabled by default. The log is created in the "log" directory in the same location of execution.
 
@@ -114,3 +134,4 @@ Both JSON files are generated in the same directory as the script.
 
 - Python (written and tested with Python 3.5.4)
 - xlwt
+- Pillow

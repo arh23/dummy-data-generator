@@ -1,4 +1,5 @@
 #! coding: utf-8
+from PIL import Image
 import subprocess, csv, xlwt, random, time, json, os, sys, platform, datetime, gzip, zipfile, tarfile, shutil
 
 class Logger():
@@ -38,6 +39,8 @@ logger = Logger()
 
 class Settings():
     def __init__(self):
+        self.imageformats = ["png", "jpg", "ico"]
+        self.dataformats = ["xls", "csv"]
         self.defaultsettings = [
             {"section":0, "index":1, "key":"filename", "desc": "Default name of files generated", "value": "data"}, 
             {"section":0, "index":2, "key":"foldername", "desc":"The name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
@@ -45,13 +48,23 @@ class Settings():
             {"section":0, "index":4, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
             {"section":0, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation y/n", "value":"n", "acceptedvalues":["y","n"]},
             {"section":0, "index":12, "key":"compresstype", "desc":"The type of compression used, if compression is enabled", "value":"gz", "acceptedvalues":["gz", "zip", "tar-gz", "tar-bz2"]},            
-            {"section":0, "index":6, "key":"fileformat", "desc":"The format of the file generated (csv or xls)", "value":"csv", "acceptedvalues":["csv","xls"]},
+            {"section":0, "index":6, "key":"fileformat", "desc":"The format of the file generated (csv or xls)", "value":"csv", "acceptedvalues":["csv","xls","png","jpg","ico"]},
             {"section":0, "index":13, "key":"sheetname", "desc":"The name of the sheet generated in xls files (defaults to 'sheet' if blank)", "value":""},            
             {"section":1, "index":7, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
             {"section":1, "index":8, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
             {"section":1, "index":9, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
             {"section":1, "index":10, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"},
-            {"section":2, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n", "acceptedvalues":["y","n"]}
+            {"section":2, "index":14, "key":"imagemode", "desc":"The way the image is generated", "value":"random", "acceptedvalues":["random","single","row"]}, 
+            {"section":2, "index":15, "key":"imageheight", "desc":"The height of the generated image", "value":"100"}, 
+            {"section":2, "index":16, "key":"imagewidth", "desc":"The width of the generated image", "value":"100"}, 
+            {"section":2, "index":23, "key":"rowheight", "desc":"The pixel height of rows generated in 'row' mode", "value":"1"}, 
+            {"section":2, "index":17, "key":"rmin", "desc":"The minimum value for random red intensity", "value":"0"}, 
+            {"section":2, "index":18, "key":"rmax", "desc":"The maximum value for random red intensity", "value":"255"},
+            {"section":2, "index":19, "key":"gmin", "desc":"The minimum value for random green intensity", "value":"0"}, 
+            {"section":2, "index":20, "key":"gmax", "desc":"The maximum value for random green intensity", "value":"255"}, 
+            {"section":2, "index":21, "key":"bmin", "desc":"The minimum value for random blue intensity", "value":"0"}, 
+            {"section":2, "index":22, "key":"bmax", "desc":"The maximum value for random blue intensity", "value":"255"},   
+            {"section":3, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n", "acceptedvalues":["y","n"]}
         ]
         self.update_values()
 
@@ -69,6 +82,16 @@ class Settings():
         self.rownumber = self.get_setting_value("rownumber")
         self.min = self.get_setting_value("min")
         self.max = self.get_setting_value("max")
+        self.imagemode = self.get_setting_value("imagemode")
+        self.imageheight = self.get_setting_value("imageheight")
+        self.imagewidth = self.get_setting_value("imagewidth")
+        self.rowheight = self.get_setting_value("rowheight")
+        self.rmin = self.get_setting_value("rmin")
+        self.rmax = self.get_setting_value("rmax")
+        self.gmin = self.get_setting_value("gmin")
+        self.gmax = self.get_setting_value("gmax")
+        self.bmin = self.get_setting_value("bmin")
+        self.bmax = self.get_setting_value("bmax")        
         self.log = self.get_setting_value("logging")
 
     def get_settings(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
@@ -238,16 +261,17 @@ def view_settings(notification = ""): # displays setting sections in the termina
 
         print("1. File and folder settings")
         print("2. Data generation settings")
-        print("3. Logging settings")  
+        print("3. Image generation settings")  
+        print("4. Logging settings")  
 
         option = input(notification + "\nEnter the section number (1 to 3) to view the settings for that section, or:\nq. Quit\n\nOption:")
 
         if option == "q":
             menu()
         elif option.isdigit():
-            if int(option) <= 3:
+            if int(option) <= 4:
                 view_setting_group(int(option) - 1)
-            elif int(option) > 3:
+            elif int(option) > 4:
                 view_settings("\nNo section with the number " + option + "...\n")
         else:
             view_settings("\nInvalid option...\n")
@@ -834,9 +858,15 @@ def create_file(notification = ""): # creates and writes the file
 
         if settings.compress == "y":
             compress_file(file)
-            message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate " + "{0:,}".format(int(settings.numberofrows)) + " rows and compress '" + file + "." + settings.compresstype.replace("-",".") + "'..."
+            if settings.fileformat in settings.imageformats:
+                message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate and compress '" + file + "." + settings.compresstype.replace("-",".") + "'..."                
+            else:
+                message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate " + "{0:,}".format(int(settings.numberofrows)) + " rows and compress '" + file + "." + settings.compresstype.replace("-",".") + "'..."
         else:
-            message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate " + "{0:,}".format(int(settings.numberofrows)) + " rows in '" + file + "'..."
+            if settings.fileformat in settings.imageformats:
+                message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate '" + file + "'..."                
+            else:
+                message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate " + "{0:,}".format(int(settings.numberofrows)) + " rows in '" + file + "'..."
 
         logger.add_log_entry(message, True)
         menu("\n" + message + "\n")
@@ -906,18 +936,59 @@ def write_file(file):
             logger.add_log_entry("Writing xls file.")
             book.save(file)
 
+        elif settings.fileformat in settings.imageformats:
+            img = Image.new('RGB', (int(settings.imagewidth), int(settings.imageheight)))
+
+            pixels = []
+
+            red = 0
+            green = 0
+            blue = 0
+
+            if settings.imagemode == "single":
+                red = int(settings.rmax)
+                green = int(settings.gmax)
+                blue = int(settings.bmax)
+
+            for x in range (0, int(settings.imageheight)):
+                if settings.imagemode == "row":
+                    if x % int(settings.rowheight) == 0:
+                        red = random.randint(int(settings.rmin), int(settings.rmax))
+                        green = random.randint(int(settings.gmin), int(settings.gmax))
+                        blue = random.randint(int(settings.bmin), int(settings.bmax))
+
+                for y in range (0, int(settings.imagewidth)):
+                    if settings.imagemode == "random":
+                        pixels.append(
+                            (
+                                (random.randint(int(settings.rmin), int(settings.rmax))),
+                                (random.randint(int(settings.gmin), int(settings.gmax))),
+                                (random.randint(int(settings.bmin), int(settings.bmax)))
+                            )
+                        )
+                    else:
+                        pixels.append((red, green, blue))                       
+
+            logger.add_log_entry("RGB values generated: " + str(pixels[:10]) + (", " + str((len(pixels) - 10)) + " more RGB values." if int(len(pixels)) > 10 else ""), True)
+
+            img.putdata(pixels)
+            img.save(file)
+
         return (time.time() - starttime)
     
     except ValueError as err:
-        logger.add_log_entry("ERROR - Invalid value specified for column " + str(currentcolumn + 1) + " - " + str(columns.json[currentcolumn]) +", took %.2f seconds before failing." % (time.time() - starttime), True)
-
         try:
-            os.remove(file)
             logger.add_log_entry("Deleting file '" + file + "'...", True)
+            os.remove(file)
         except Exception:
             pass
 
-        menu("\nAn error occurred during file generation: Invalid value specified for column " + str(currentcolumn + 1) + " - " + str(columns.json[currentcolumn]) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime))     
+        if settings.fileformat not in settings.imageformats:
+            logger.add_log_entry("ERROR - Invalid value specified for column " + str(currentcolumn + 1) + " - " + str(columns.json[currentcolumn]) +", took %.2f seconds before failing." % (time.time() - starttime), True)
+            menu("\nAn error occurred during file generation: Invalid value specified for column " + str(currentcolumn + 1) + " - " + str(columns.json[currentcolumn]) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime))     
+        else:
+            logger.add_log_entry("ERROR - " + str(err) + ", took %.2f seconds before failing." % (time.time() - starttime), True)
+            menu("\nAn error occurred during image generation: " + str(err) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime))     
 
 def compress_file(file): # compress the generated file, if compression is enabled
     try:
@@ -963,12 +1034,20 @@ def menu(notification = ""): # main menu, first thing the user will see
     columns.get_columns()
     valuedict.reset_indexes()
 
-    print("Dummy data generator " + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + "\nCurrent column file: " + columnfile + "\n" + ("Logging enabled\n" if settings.log == "y" else "") + notification)
+    print("Dummy data generator " + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + 
+        ("\nCurrent column file: " + columnfile if settings.fileformat not in settings.imageformats else "") +
+        ("\nImage resolution: " + settings.imagewidth + " x " + settings.imageheight if settings.fileformat in settings.imageformats else "") + 
+        ("\nImage generation mode: " + settings.imagemode if settings.fileformat in settings.imageformats else "") +
+        ("\n - Red: (" + settings.rmin + "," + settings.rmax + "), Green: (" + settings.gmin + "," + settings.gmax + "), Blue: (" + settings.bmin + "," + settings.bmax + ")" if settings.fileformat in settings.imageformats and settings.imagemode == "random" else "" ) +
+        ("\n - Red: " + settings.rmax + ", Green: " + settings.gmax + ", Blue: " + settings.bmax + "" if settings.fileformat in settings.imageformats and settings.imagemode == "single" else "" ) +
+        ("\n - Red: (" + settings.rmin + "," + settings.rmax + "), Green: (" + settings.gmin + "," + settings.gmax + "), Blue: (" + settings.bmin + "," + settings.bmax + ")\n - Row height: " + settings.rowheight if settings.fileformat in settings.imageformats and settings.imagemode == "row" else "" ) +
+        ("\nLogging enabled\n" if settings.log == "y" else "\n") + notification)
 
     print("1. Generate file")
-    print("2. View example row")
-    print("3. View column files")
-    print("4. Add and edit columns")
+    if settings.fileformat not in settings.imageformats:
+        print("2. View example row")
+        print("3. View column files")
+        print("4. Add and edit columns")
     print("5. Settings")
     print("q. Quit")
 
@@ -976,11 +1055,11 @@ def menu(notification = ""): # main menu, first thing the user will see
 
     if option == "1":
         create_file()
-    elif option == "2":
+    elif option == "2" and settings.fileformat in settings.dataformats:
         get_demo_rows()
-    elif option == "3":
+    elif option == "3" and settings.fileformat in settings.dataformats:
         view_column_files()
-    elif option == "4":
+    elif option == "4" and settings.fileformat in settings.dataformats:
         view_columns()
     elif option == "5":
         view_settings()
