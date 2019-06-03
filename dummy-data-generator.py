@@ -837,18 +837,19 @@ def create_file(notification = ""): # creates and writes the file
     try:
         clear()
 
-        if settings.numberofrows == "":
-            settings.numberofrows = input(notification + "Enter the number of rows to generate (or enter 'q' or 'b' to go back to the menu): ")
-            clear()
+        if settings.fileformat in settings.dataformats:
+            if settings.numberofrows == "":
+                settings.numberofrows = input(notification + "Enter the number of rows to generate (or enter 'q' or 'b' to go back to the menu): ")
+                clear()
+
+            if settings.numberofrows == "q" or settings.numberofrows == "b":
+                menu()
+            elif settings.numberofrows.isdigit() == False and (settings.numberofrows != 'q' or settings.numberofrows != 'b'):
+                settings.numberofrows = ""
+                create_file("Please enter a number...\n\n")
 
         file = get_filename()
         folder = settings.foldername
-
-        if settings.numberofrows == "q" or settings.numberofrows == "b":
-            menu()
-        elif settings.numberofrows.isdigit() == False and (settings.numberofrows != 'q' or settings.numberofrows != 'b'):
-            settings.numberofrows = ""
-            create_file("Please enter a number...\n\n")
 
         if folder != "":
             if os.path.exists(folder + "/") == False:
