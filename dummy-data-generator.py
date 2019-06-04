@@ -47,6 +47,8 @@ class Settings():
             {"section":0, "index":2, "key":"foldername", "desc":"The name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
             {"section":0, "index":3, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
             {"section":0, "index":4, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
+            {"section":0, "index":24, "key":"presetfile", "desc":"The name of the preset file", "value":""},
+            {"section":0, "index":25, "key":"presetfolder", "desc":"The folder where preset files are stored", "value":"presets"},
             {"section":0, "index":13, "key":"sheetname", "desc":"The name of the sheet generated in xls files (defaults to 'sheet' if blank)", "value":""},
             {"section":1, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation y/n", "value":"n", "acceptedvalues":["y","n"]},
             {"section":1, "index":12, "key":"compresstype", "desc":"The type of compression used, if compression is enabled", "value":"gz", "acceptedvalues":["gz", "zip", "tar-gz", "tar-bz2"]},            
@@ -63,7 +65,7 @@ class Settings():
             {"section":3, "index":19, "key":"gmin", "desc":"The minimum value for random green intensity", "value":"0"}, 
             {"section":3, "index":20, "key":"gmax", "desc":"The maximum value for random green intensity", "value":"255"}, 
             {"section":3, "index":21, "key":"bmin", "desc":"The minimum value for random blue intensity", "value":"0"}, 
-            {"section":3, "index":22, "key":"bmax", "desc":"The maximum value for random blue intensity", "value":"255"},   
+            {"section":3, "index":22, "key":"bmax", "desc":"The maximum value for random blue intensity", "value":"255"},
             {"section":4, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n", "acceptedvalues":["y","n"]}
         ]
         self.update_values()
@@ -74,6 +76,8 @@ class Settings():
         self.foldername = self.get_setting_value("foldername")
         self.columnfile = self.get_setting_value("columnfile")
         self.columnfolder = self.get_setting_value("columnfolder")
+        self.presetfile = self.get_setting_value("presetfile")
+        self.presetfolder =self.get_setting_value("presetfolder")
         self.compress = self.get_setting_value("compress")
         self.compresstype = self.get_setting_value("compresstype")
         self.fileformat = self.get_setting_value("fileformat")
@@ -170,6 +174,46 @@ class Settings():
         self.update_settings()
 
 settings = Settings()
+
+class Presets():
+    def get_presets(self): # gets the columns from the columns json file, if the columns json file is not present, this will create the file
+        self.jsonfilename = settings.presetfile
+
+        if settings.presetfolder != "":
+            if os.path.exists(settings.presetfolder + "/") == False:
+                os.makedirs(settings.presetfolder + "/")
+
+            self.jsonfilename = settings.presetfolder + "/" + settings.presetfile
+
+        if settings.presetfile != "":
+
+            if os.path.exists(self.jsonfilename) == False:
+                with open(self.jsonfilename, "w") as jsonfile:
+                    data = {}
+                    for x in range(0, len(settings.json)):
+                        if settings.json[x]["key"] != "presetfile" and settings.json[x]["key"] != "presetfolder" and settings.json[x]["key"] != "logging":
+                            data[settings.json[x]["key"]] = ""
+                    jsonfile.write(json.dumps(data, indent=4))
+
+            with open(self.jsonfilename) as jsonfile:
+                data = json.load(jsonfile)
+
+            self.json = data
+
+            self.apply_preset()
+
+    def update_preset(self): # saves all changes to the column in the columns json file
+        with open(self.jsonfilename, "w") as jsonfile:
+            jsonfile.write(json.dumps(self.json, indent=4))
+
+        self.get_presets()
+
+    def apply_preset(self):
+        for value in self.json:
+            if self.json[value] != "":
+                setattr(settings, value, self.json[value])
+
+presets = Presets()
 
 class Columns():
     def get_columns(self): # gets the columns from the columns json file, if the columns json file is not present, this will create the file
@@ -332,7 +376,9 @@ def view_one_setting(index): # displays a selected setting in the terminal and p
             view_setting_group(settings.json[selectedindex]["section"])
         elif option == "1":
             if settings.json[selectedindex]["key"] == "columnfile":
-                view_column_files("", "settings")
+                view_files_list("", "settings")
+            if settings.json[selectedindex]["key"] == "presetfile":
+                view_files_list("", "settings", "preset")
             else:
                 inputvalue = input("\nEnter new setting value:")
                 if "acceptedvalues" in settings.json[selectedindex]:
@@ -352,21 +398,33 @@ def view_one_setting(index): # displays a selected setting in the terminal and p
         else:
             notification = "\nInvalid option...\n"
 
-def view_column_files(notification = "", prevstate = "menu"): # displays the column files in the terminal, and allows the user to select a file to use
+def view_files_list(notification = "", prevstate = "menu", mode = "column"): # displays the column files in the terminal, and allows the user to select a file to use
     option = ""
     while option != "q":
         clear()
 
         subnotif = "\n"
 
-        print("The following column files are located in the '" + settings.columnfolder + "' folder: \n\nCurrent columns file: " + settings.columnfile + "\n")
+        if mode == "column":
+            print("The following column files are located in the '" + settings.columnfolder + "' folder: \n\nCurrent columns file: " + settings.columnfile + "\n")
 
-        if settings.columnfolder == "":
-            settings.columnfolder = "."
+            if settings.columnfolder == "":
+                settings.columnfolder = "."
 
-        files = os.listdir(settings.columnfolder)
+            files = os.listdir(settings.columnfolder)
+        elif mode == "preset":
+            print("The following preset files are located in the '" + settings.presetfolder + "' folder: \n" + ("\nCurrent preset file: " + settings.presetfile + "\n" if settings.presetfile != "" else ""))
+
+            if settings.presetfolder == "":
+                settings.presetfolder = "."
+
+            files = os.listdir(settings.presetfolder)
 
         fileslist = []
+
+        if mode == "preset":
+            fileslist.append("<None>")
+
         for names in files:
             if names.endswith(".json"):
                 fileslist.append(names)
@@ -374,155 +432,225 @@ def view_column_files(notification = "", prevstate = "menu"): # displays the col
         for y in range (0, len(fileslist)):
             print(str(y + 1) + ". " + fileslist[y])
 
-        if len(fileslist) == 1:
-            option = input(notification + "\n+. Add a column file\nx. Delete a column file\nd. Duplicate the current column file\nq. Quit\n\nOption:")
-
-            if option == "q":
-                if prevstate == "menu":
-                    menu()
-                elif prevstate == "settings":
-                    view_settings()
-                else:
-                    menu()
-            elif option == "+":
-                columnfilename = input("\nEnter the name of the new column file (excluding file extension): ")
-
-                for y in range (0, len(settings.json)):
-                    if settings.json[y]["key"] == "columnfile":
-                        settings.json[y]["value"] = columnfilename + ".json"
-                        settings.update_settings()
-
-                settings.update_settings()
-                columns.get_columns()
-                notification = "\nCreated and selected new column file " + columnfilename + ".json...\n"
-            elif option == "d":
-                if input("\nAre you sure you want to duplicate the current columns file? y/n: ") == "y":
-                    duplicatename = input("Enter name for duplicated file (do not include extension): ") + ".json"
-
-                    try:
-                        shutil.copy(settings.columnfolder + "/" + settings.columnfile, settings.columnfolder + "/" + duplicatename)
-
-                        for y in range (0, len(settings.json)):
-                            if settings.json[y]["key"] == "columnfile":
-                                settings.json[y]["value"] = duplicatename
-                                settings.update_settings()
-                                notification = "\nSelected the new duplicate column file, " + duplicatename + "...\n"
-                    except shutil.SameFileError:
-                        notification = "\nColumn file with the name '" + duplicatename +"' already exists.\n"
-                    except Exception:
-                        notification = "\nAn unknown error occurred when duplicating the columns file.\n"
+        if mode == "column":
+            if len(fileslist) == 1:
+                option = input(notification + "\n+. Add a column file\nx. Delete a column file\nd. Duplicate the current column file\nq. Quit\n\nOption:")
             else:
-                notification = "\nThe only available column file has already been selected...\n"
-        else:
-            option = input(notification + "\nEnter a file number (1 to " + str(len(fileslist)) + ") to select the column for use, or:\n+. Add a column file\nx. Delete a column file\nd. Duplicate the current column file\nq. Quit\n\nOption:")
+                option = input(notification + "\nEnter a file number (1 to " + str(len(fileslist)) + ") to select the column for use, or:\n+. Add a column file\nx. Delete a column file\nd. Duplicate the current column file\nq. Quit\n\nOption:")
+        elif mode == "preset":
+            if len(fileslist) == 1:
+                option = input(notification + "\n+. Add a preset file\nx. Delete a preset file\nd. Duplicate the current preset file\nq. Quit\n\nOption:")
+            else:
+                option = input(notification + "\nEnter a file number (1 to " + str(len(fileslist)) + ") to select the preset for use, or:\n+. Add a preset file\nx. Delete a preset file\nd. Duplicate the current preset file\nq. Quit\n\nOption:")
 
-            if option == "q":
-                if prevstate == "menu":
-                    menu()
-                elif prevstate == "settings":
-                    view_settings()
-                else:
-                    menu()
-            elif option == "+":
-                columnfilename = input("\nEnter the name of the new column file (excluding file extension): ")
+        if option == "q":
+            if prevstate == "menu":
+                menu()
+            elif prevstate == "settings":
+                view_settings()
+            else:
+                menu()
+        elif option == "+":
+            if mode == "column":
+                newfilename = input("\nEnter the name of the new column file (excluding file extension): ")
 
                 for y in range (0, len(settings.json)):
                     if settings.json[y]["key"] == "columnfile":
-                        settings.json[y]["value"] = columnfilename + ".json"
-                        settings.update_settings()
+                        settings.json[y]["value"] = newfilename + ".json"
 
                 settings.update_settings()
                 columns.get_columns()
-                notification = "\nCreated and selected new column file " + columnfilename + ".json...\n"
-            elif option == "x":
-                columnfilename = input("\nEnter the name of the column file to be deleted (excluding file extension): ") + ".json"
+                notification = "\nCreated and selected new column file " + newfilename + ".json...\n"
+            elif mode == "preset":
+                newfilename = input("\nEnter the name of the new preset file (excluding file extension): ")
 
-                if os.path.exists(settings.columnfolder + "/" + columnfilename):
-                    os.remove(settings.columnfolder + "/" + columnfilename)
+                for y in range (0, len(settings.json)):
+                    if settings.json[y]["key"] == "presetfile":
+                        settings.json[y]["value"] = newfilename + ".json"
 
-                    if settings.columnfile == columnfilename:
+                settings.update_settings()
+                presets.get_presets()
+                notification = "\nCreated and selected new preset file " + newfilename + ".json...\n"
+        elif option == "x" and len(fileslist) > 1:
+            deletefilename = input("\nEnter the name of the file to be deleted (excluding file extension): ") + ".json"
+
+            if mode == "column":
+                deletepath = settings.columnfolder + "/" + deletefilename
+            elif mode == "preset":
+                deletepath = settings.presetfolder + "/" + deletefilename     
+                               
+            if os.path.exists(deletepath):
+                os.remove(deletepath)
+
+                if mode == "column":
+                    if settings.columnfile == deletefilename:
                         for y in range (0, len(settings.json)):
                             if settings.json[y]["key"] == "columnfile":
                                 settings.json[y]["value"] = "columns.json"
                                 settings.update_settings()
-                                subnotif = "Reverted column file to 'columns.json' as deleted file was the selected columns file!\n"
+                                subnotif = "Reverted column file to 'columns.json' as the deleted file was the selected columns file!\n"
 
                     columns.get_columns()
-                    notification = "\nDeleted column file " + columnfilename + "... " + subnotif
-                else:
-                    notification = "\nFile " + columnfilename + " does not exist... " + subnotif
-            elif option == "d":
-                if input("\nAre you sure you want to duplicate the current columns file? y/n: ") == "y":
-                    duplicatename = input("Enter name for duplicated file (do not include extension): ") + ".json"
+                    notification = "\nDeleted column file " + deletefilename + "... " + subnotif
+
+                elif mode == "preset":
+                    if settings.presetfile == deletefilename:
+                        for y in range (0, len(settings.json)):
+                            if settings.json[y]["key"] == "presetfile":
+                                settings.json[y]["value"] = ""
+                                settings.update_settings()
+                                subnotif = "No preset file is selected as the deleted file was the selected preset file!\n"
+
+                    presets.get_presets()
+                    notification = "\nDeleted preset file " + deletefilename + "... " + subnotif                        
+            else:
+                notification = "\nFile " + deletefilename + " does not exist... " + subnotif
+        elif option == "x" and len(fileslist) <= 1:
+            if mode == "column":
+                notification = "\nCannot delete files when only one exists...\n"
+            elif mode == "preset":
+                notification = "\nNo files to delete...\n"                
+        elif option == "d":
+            originallocation = ""
+            duplicatelocation = ""
+            duplicatename = ""
+
+            if mode == "preset" and settings.presetfile == "":
+                notification = "\nNo preset file selected.\n"
+            else:
+                if input("\nAre you sure you want to duplicate the currently selected " +  ("column" if mode == "column" else "preset") + " file? y/n: ") == "y":
+                    if mode == "column":
+                            duplicatename = input("Enter name for duplicated file (do not include extension): ") + ".json"
+
+                            originallocation = settings.columnfolder + "/" + settings.columnfile
+                            duplicatelocation = settings.columnfolder + "/" + duplicatename
+                    elif mode == "preset":
+                            duplicatename = input("Enter name for duplicated file (do not include extension): ") + ".json"
+
+                            originallocation = settings.presetfolder + "/" + settings.presetfile
+                            duplicatelocation = settings.presetfolder + "/" + duplicatename
 
                     try:
-                        shutil.copy(settings.columnfolder + "/" + settings.columnfile, settings.columnfolder + "/" + duplicatename)
+                        shutil.copy(originallocation, duplicatelocation)
 
                         for y in range (0, len(settings.json)):
-                            if settings.json[y]["key"] == "columnfile":
+                            if mode == "column" and settings.json[y]["key"] == "columnfile":
                                 settings.json[y]["value"] = duplicatename
                                 settings.update_settings()
                                 notification = "\nSelected the new duplicate column file, " + duplicatename + "...\n"
+
+                            elif mode == "preset" and settings.json[y]["key"] == "presetfile":
+                                settings.json[y]["value"] = duplicatename
+                                settings.update_settings()
+                                notification = "\nSelected the new duplicate preset file, " + duplicatename + "...\n"
+
                     except shutil.SameFileError:
                         notification = "\nColumn file with the name '" + duplicatename +"' already exists.\n"
                     except Exception:
-                        notification = "\nAn unknown error occurred when duplicating the columns file.\n"
-            elif option.isdigit():
-                if int(option) <= len(fileslist):
-                    for y in range (0, len(settings.json)):
-                        if settings.json[y]["key"] == "columnfile":
-                            settings.json[y]["value"] = fileslist[int(option) - 1]
-                            settings.update_settings()
-                            notification = "\nSelected column file " + option + ", " + fileslist[int(option) - 1] + "...\n"
+                        notification = "\nAn unknown error occurred when duplicating the file.\n"
+        elif option.isdigit():
+            if int(option) <= len(fileslist):
+                for y in range (0, len(settings.json)):
+                    if mode == "column" and settings.json[y]["key"] == "columnfile":
+                        settings.json[y]["value"] = fileslist[int(option) - 1]
+                        settings.update_settings()
+                        notification = "\nSelected column file " + option + ", " + fileslist[int(option) - 1] + "...\n"
 
-                elif int(option) > len(fileslist):
-                    notification = "\nNo column file " + option + "...\n"
+                    elif mode == "preset" and settings.json[y]["key"] == "presetfile":
+                        if fileslist[int(option) - 1] == "<None>":
+                            settings.json[y]["value"] = ""
+                        else:
+                            settings.json[y]["value"] = fileslist[int(option) - 1]
+
+                        settings.update_settings()
+                        notification = "\nSelected preset file " + option + ", " + fileslist[int(option) - 1] + "...\n"
+
+            elif int(option) > len(fileslist):
+                notification = "\nNo file " + option + "...\n"
+        else:
+            if len(fileslist) <= 1:
+                notification = "\nThe only available file has already been selected...\n"
             else:
                 notification = "\nInvalid column file or option...\n"
 
-def view_columns(notification = ""): # displays the columns in the terminal, and allows the user to select columns
-    option = ""
-    while option != "q":
-        clear()
+def view_json(notification = "", mode = "column"): # displays the columns in the terminal, and allows the user to select columns
+    if mode == "preset" and settings.presetfile == "":
+        menu("\nNo preset file selected...\n")
+    else:
+        option = ""
+        while option != "q":
+            clear()
 
-        print("The following columns and values are currently defined:\n")
+            count = 0
 
-        count = 0
+            if mode == "column":
+                print("The following columns and values are currently defined:\n")
 
-        for y in range (1, columns.get_columns_total() + 1):
-            print(str(y) + ". " + columns.json[y - 1]["name"] + " - " + columns.json[y - 1]["value"])
-            count = y
+                for y in range (1, columns.get_columns_total() + 1):
+                    print(str(y) + ". " + columns.json[y - 1]["name"] + " - " + columns.json[y - 1]["value"])
+                    count = y
 
-        option = input(notification + "\nEnter a column number (1 to " + str(columns.get_columns_total()) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\n\nOption:")
+                option = input(notification + "\nEnter a number (1 to " + str(columns.get_columns_total()) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\n\nOption:")
 
-        if option == "q":
-            menu()
-        elif option.isdigit():
-            if int(option) <= count:
-                view_one_column(int(option))
-            elif int(option) > count:
-                notification = "\nNo column " + option + "...\n"
-        elif option == "+":
-            columns.json.append({"name":input("\nEnter the name of the new column: "), "value":input("Enter the value of the new column: ")})
+            elif mode == "preset":
+                print("The following presets are currently defined:\n")
+                jsonvalues = []
 
-            columns.update_column_data()
+                for value in presets.json:
+                    count = count + 1
+                    print(str(count) + ". " + value + " - " + (presets.json[value] if presets.json[value] != "" else "<Not set>"))
+                    jsonvalues.append(value)
 
-            notification = "\nNew column '" + columns.json[int(columns.get_columns_total() - 1)]["name"] + "' added!\n"
-            logger.add_log_entry("New column '" + columns.json[int(columns.get_columns_total() - 1)]["name"] + "' added!", True)
-        elif option == "x":
-            index = int(input("\nEnter the column number you want to delete: ")) - 1
-            confirm = input("Are you sure you want to delete column " + str(index + 1) + "? y/n\n")
+                option = input(notification + "\nEnter a number (1 to " + str(len(presets.json)) + ") to edit the preset, or:\nq. Quit\n\nOption:")
 
-            if confirm == "y":
-                notification = "\nColumn '" + columns.json[index]["name"] + "' deleted!\n"
-                logger.add_log_entry("Column '" + columns.json[index]["name"] + "' deleted!", True)
+            if option == "q":
+                menu()
+            elif option.isdigit():
+                if int(option) <= count:
+                    if mode == "column":
+                        view_one_column(int(option))
+                    elif mode == "preset":
+                        acceptedvalues = []
 
-                columns.json.pop(index)
+                        for values in settings.json:
+                            if values["key"] == jsonvalues[int(option) - 1] and "acceptedvalues" in values:
+                                acceptedvalues = values["acceptedvalues"]
+
+                        inputvalue = input("\nEnter a new preset setting value for setting number " + str(option) + ": ")
+                        
+                        if len(acceptedvalues) != 0 and inputvalue not in acceptedvalues and inputvalue != "":
+                            notification = "\nValue is not valid for current setting, valid values are " + str(acceptedvalues) + ".\n"
+                        else:
+                            presets.json[str(jsonvalues[int(option) - 1])] = inputvalue
+                            notification = "\nPreset setting updated.\n"                            
+
+                        presets.update_preset()
+                elif int(option) > count:
+                    if mode == "column":
+                        notification = "\nNo column " + option + "...\n"
+                    elif mode == "preset":
+                        notification = "\nNo preset " + option + "...\n"
+            elif mode == "column" and option == "+":
+                columns.json.append({"name":input("\nEnter the name of the new column: "), "value":input("Enter the value of the new column: ")})
+
                 columns.update_column_data()
+
+                notification = "\nNew column '" + columns.json[int(columns.get_columns_total() - 1)]["name"] + "' added!\n"
+                logger.add_log_entry("New column '" + columns.json[int(columns.get_columns_total() - 1)]["name"] + "' added!", True)
+            elif mode == "column" and option == "x":
+                index = int(input("\nEnter the column number you want to delete: ")) - 1
+                confirm = input("Are you sure you want to delete column " + str(index + 1) + "? y/n\n")
+
+                if confirm == "y":
+                    notification = "\nColumn '" + columns.json[index]["name"] + "' deleted!\n"
+                    logger.add_log_entry("Column '" + columns.json[index]["name"] + "' deleted!", True)
+
+                    columns.json.pop(index)
+                    columns.update_column_data()
+                else:
+                    notification = "\nColumn NOT deleted!\n"
             else:
-                notification = "\nColumn NOT deleted!\n"
-        else:
-            notification = "\nInvalid column or option...\n"
+                notification = "\nInvalid " + mode + " or option...\n"
 
 def view_one_column(index): # displays a selected column in the terminal and provides the user with more options for the particular column
     option = ""
@@ -540,11 +668,11 @@ def view_one_column(index): # displays a selected column in the terminal and pro
         if option == "q":
             menu()
         elif option == "b":
-            view_columns()
+            view_json()
         elif option == "1":
             columns.json[index - 1]["name"] = input("\nEnter new column name:")
             columns.update_column_data()
-            view_columns("\nColumn name for column " + str(index) + " updated!\n")
+            view_json("\nColumn name for column " + str(index) + " updated!\n")
         elif option == "2":
             print("\nView the documentation for the possible column values and placeholders that can be used.\n")
             columns.json[index - 1]["value"] = input("Enter new column value:")
@@ -552,7 +680,7 @@ def view_one_column(index): # displays a selected column in the terminal and pro
 
             message = "Column value for column " + str(index) + " updated!"
             logger.add_log_entry(message, True)
-            view_columns("\n" + message + "\n")
+            view_json("\n" + message + "\n")
         elif option == "x":
             confirm = input("\nAre you sure you want to delete column " + str(index) + "? y/n\n")
 
@@ -563,9 +691,9 @@ def view_one_column(index): # displays a selected column in the terminal and pro
                 columns.update_column_data()
 
                 logger.add_log_entry(message, True)
-                view_columns("\n" + message + "\n")
+                view_json("\n" + message + "\n")
             else:
-                view_columns("\nColumn '" + columns.json[index - 1]["name"] + "' NOT deleted!\n")
+                view_json("\nColumn '" + columns.json[index - 1]["name"] + "' NOT deleted!\n")
         else:
             notification = "\nInvalid option...\n"
 
@@ -1020,6 +1148,17 @@ def menu(notification = ""): # main menu, first thing the user will see
     clear()
 
     settings.update_values()
+    presets.get_presets()
+
+    if settings.presetfile != "":
+        presetmodstring = ": "
+
+        for value in presets.json:
+            if presets.json[value] != "":
+                presetmodstring += "\n - " + value
+
+        if presetmodstring == ": ":
+            presetmodstring += "<None>"
 
     filename = settings.filename 
     columnfile = settings.columnfile
@@ -1036,7 +1175,9 @@ def menu(notification = ""): # main menu, first thing the user will see
     columns.get_columns()
     valuedict.reset_indexes()
 
-    print("Dummy data generator " + version + "\nAndrew H 2018\n\nCurrent file name: " + filename + 
+    print("Dummy data generator " + version + "\nAndrew H 2018\n" +
+        ("\nCurrent preset file: " + settings.presetfile + "\nThe selected preset file modifies the following settings" + presetmodstring if settings.presetfile != "" else "") +
+        "\nCurrent file name: " + filename + 
         ("\nCurrent column file: " + columnfile if settings.fileformat not in settings.imageformats else "") +
         ("\nImage resolution: " + settings.imagewidth + " x " + settings.imageheight if settings.fileformat in settings.imageformats else "") + 
         ("\nImage generation mode: " + settings.imagemode if settings.fileformat in settings.imageformats else "") +
@@ -1050,7 +1191,9 @@ def menu(notification = ""): # main menu, first thing the user will see
         print("2. View example row")
         print("3. View column files")
         print("4. Add and edit columns")
-    print("5. Settings")
+    print("5. View preset files")
+    print("6. Edit preset")
+    print("7. Settings")
     print("q. Quit")
 
     option = input("\nEnter option: ")
@@ -1060,10 +1203,14 @@ def menu(notification = ""): # main menu, first thing the user will see
     elif option == "2" and settings.fileformat in settings.dataformats:
         get_demo_rows()
     elif option == "3" and settings.fileformat in settings.dataformats:
-        view_column_files()
+        view_files_list()
     elif option == "4" and settings.fileformat in settings.dataformats:
-        view_columns()
+        view_json()
     elif option == "5":
+        view_files_list("", "menu", "preset")
+    elif option == "6":
+        view_json("", "preset")
+    elif option == "7":
         view_settings()
     elif option == "q":
         exit()
