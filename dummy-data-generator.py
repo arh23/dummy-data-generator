@@ -189,10 +189,10 @@ class Presets():
 
             if os.path.exists(self.jsonfilename) == False:
                 with open(self.jsonfilename, "w") as jsonfile:
-                    data = {}
+                    data = []
                     for x in range(0, len(settings.json)):
                         if settings.json[x]["key"] != "presetfile" and settings.json[x]["key"] != "presetfolder" and settings.json[x]["key"] != "logging":
-                            data[settings.json[x]["key"]] = ""
+                            data.append({"name": settings.json[x]["key"], "value": ""})
                     jsonfile.write(json.dumps(data, indent=4))
 
             with open(self.jsonfilename) as jsonfile:
@@ -209,9 +209,9 @@ class Presets():
         self.get_presets()
 
     def apply_preset(self):
-        for value in self.json:
-            if self.json[value] != "":
-                setattr(settings, value, self.json[value])
+        for presetsetting in self.json:
+            if presetsetting["value"] != "":
+                setattr(settings, presetsetting["name"], presetsetting["value"])
 
 presets = Presets()
 
@@ -594,12 +594,10 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
 
             elif mode == "preset":
                 print("The following presets are currently defined:\n")
-                jsonvalues = []
 
-                for value in presets.json:
-                    count = count + 1
-                    print(str(count) + ". " + value + " - " + (presets.json[value] if presets.json[value] != "" else "<Not set>"))
-                    jsonvalues.append(value)
+                for y in range (1, len(presets.json) + 1):
+                    print(str(y) + ". " + presets.json[y - 1]["name"] + " - " + (presets.json[y - 1]["value"] if presets.json[y - 1]["value"] != "" else "<No value>"))
+                    count = y
 
                 option = input(notification + "\nEnter a number (1 to " + str(len(presets.json)) + ") to edit the preset, or:\nq. Quit\n\nOption:")
 
@@ -613,7 +611,7 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                         acceptedvalues = []
 
                         for values in settings.json:
-                            if values["key"] == jsonvalues[int(option) - 1] and "acceptedvalues" in values:
+                            if values["key"] == presets.json[int(option) - 1]["name"] and "acceptedvalues" in values:
                                 acceptedvalues = values["acceptedvalues"]
 
                         inputvalue = input("\nEnter a new preset setting value for setting number " + str(option) + ": ")
@@ -621,7 +619,7 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                         if len(acceptedvalues) != 0 and inputvalue not in acceptedvalues and inputvalue != "":
                             notification = "\nValue is not valid for current setting, valid values are " + str(acceptedvalues) + ".\n"
                         else:
-                            presets.json[str(jsonvalues[int(option) - 1])] = inputvalue
+                            presets.json[int(option) - 1]["value"] = inputvalue
                             notification = "\nPreset setting updated.\n"                            
 
                         presets.update_preset()
@@ -1153,9 +1151,9 @@ def menu(notification = ""): # main menu, first thing the user will see
     if settings.presetfile != "":
         presetmodstring = ": "
 
-        for value in presets.json:
-            if presets.json[value] != "":
-                presetmodstring += "\n - " + value
+        for presetsetting in presets.json:
+            if presetsetting["value"] != "":
+                presetmodstring += "\n - " + presetsetting["name"]
 
         if presetmodstring == ": ":
             presetmodstring += "<None>"
@@ -1176,7 +1174,7 @@ def menu(notification = ""): # main menu, first thing the user will see
     valuedict.reset_indexes()
 
     print("Dummy data generator " + version + "\nAndrew H 2018\n" +
-        ("\nCurrent preset file: " + settings.presetfile + "\nThe selected preset file modifies the following settings" + presetmodstring if settings.presetfile != "" else "") +
+        ("\nCurrent preset file: " + settings.presetfolder + "/" + settings.presetfile + "\nThe selected preset file modifies the following settings" + presetmodstring if settings.presetfile != "" else "") +
         "\nCurrent file name: " + filename + 
         ("\nCurrent column file: " + columnfile if settings.fileformat not in settings.imageformats else "") +
         ("\nImage resolution: " + settings.imagewidth + " x " + settings.imageheight if settings.fileformat in settings.imageformats else "") + 
