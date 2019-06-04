@@ -42,29 +42,29 @@ class Settings():
         self.imageformats = ["png", "jpg", "ico"]
         self.dataformats = ["xls", "csv"]
         self.defaultsettings = [
-            {"section":0, "index":1, "key":"filename", "desc": "Default name of files generated", "value": "data"}, 
+            {"section":0, "index":1, "key":"filename", "desc": "Default name of files generated", "value": "data"},
+            {"section":0, "index":6, "key":"fileformat", "desc":"The format of the file generated", "value":"csv", "acceptedvalues":["csv","xls","png","jpg","ico"]},
             {"section":0, "index":2, "key":"foldername", "desc":"The name of folder where generated files are located (remove the folder name to skip folder creation)", "value":"generated-data"},
             {"section":0, "index":3, "key":"columnfile", "desc":"The name of the json file where the columns are stored (will create the file if not present)", "value":"columns.json"},
             {"section":0, "index":4, "key":"columnfolder", "desc":"The name of the folder where the columns are stored (remove the folder name to skip folder creation)", "value":"columns"},
-            {"section":0, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation y/n", "value":"n", "acceptedvalues":["y","n"]},
-            {"section":0, "index":12, "key":"compresstype", "desc":"The type of compression used, if compression is enabled", "value":"gz", "acceptedvalues":["gz", "zip", "tar-gz", "tar-bz2"]},            
-            {"section":0, "index":6, "key":"fileformat", "desc":"The format of the file generated (csv or xls)", "value":"csv", "acceptedvalues":["csv","xls","png","jpg","ico"]},
-            {"section":0, "index":13, "key":"sheetname", "desc":"The name of the sheet generated in xls files (defaults to 'sheet' if blank)", "value":""},            
-            {"section":1, "index":7, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
-            {"section":1, "index":8, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
-            {"section":1, "index":9, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
-            {"section":1, "index":10, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"},
-            {"section":2, "index":14, "key":"imagemode", "desc":"The way the image is generated", "value":"random", "acceptedvalues":["random","single","row"]}, 
-            {"section":2, "index":15, "key":"imageheight", "desc":"The height of the generated image", "value":"100"}, 
-            {"section":2, "index":16, "key":"imagewidth", "desc":"The width of the generated image", "value":"100"}, 
-            {"section":2, "index":23, "key":"rowheight", "desc":"The pixel height of rows generated in 'row' mode", "value":"1"}, 
-            {"section":2, "index":17, "key":"rmin", "desc":"The minimum value for random red intensity", "value":"0"}, 
-            {"section":2, "index":18, "key":"rmax", "desc":"The maximum value for random red intensity", "value":"255"},
-            {"section":2, "index":19, "key":"gmin", "desc":"The minimum value for random green intensity", "value":"0"}, 
-            {"section":2, "index":20, "key":"gmax", "desc":"The maximum value for random green intensity", "value":"255"}, 
-            {"section":2, "index":21, "key":"bmin", "desc":"The minimum value for random blue intensity", "value":"0"}, 
-            {"section":2, "index":22, "key":"bmax", "desc":"The maximum value for random blue intensity", "value":"255"},   
-            {"section":3, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n", "acceptedvalues":["y","n"]}
+            {"section":0, "index":13, "key":"sheetname", "desc":"The name of the sheet generated in xls files (defaults to 'sheet' if blank)", "value":""},
+            {"section":1, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation y/n", "value":"n", "acceptedvalues":["y","n"]},
+            {"section":1, "index":12, "key":"compresstype", "desc":"The type of compression used, if compression is enabled", "value":"gz", "acceptedvalues":["gz", "zip", "tar-gz", "tar-bz2"]},            
+            {"section":2, "index":7, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
+            {"section":2, "index":8, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
+            {"section":2, "index":9, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
+            {"section":2, "index":10, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"},
+            {"section":3, "index":14, "key":"imagemode", "desc":"The way the image is generated", "value":"random", "acceptedvalues":["random","single","row"]}, 
+            {"section":3, "index":15, "key":"imageheight", "desc":"The height of the generated image", "value":"100"}, 
+            {"section":3, "index":16, "key":"imagewidth", "desc":"The width of the generated image", "value":"100"}, 
+            {"section":3, "index":23, "key":"rowheight", "desc":"The pixel height of rows generated in 'row' mode", "value":"1"}, 
+            {"section":3, "index":17, "key":"rmin", "desc":"The minimum value for random red intensity", "value":"0"}, 
+            {"section":3, "index":18, "key":"rmax", "desc":"The maximum value for random red intensity", "value":"255"},
+            {"section":3, "index":19, "key":"gmin", "desc":"The minimum value for random green intensity", "value":"0"}, 
+            {"section":3, "index":20, "key":"gmax", "desc":"The maximum value for random green intensity", "value":"255"}, 
+            {"section":3, "index":21, "key":"bmin", "desc":"The minimum value for random blue intensity", "value":"0"}, 
+            {"section":3, "index":22, "key":"bmax", "desc":"The maximum value for random blue intensity", "value":"255"},   
+            {"section":4, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n", "acceptedvalues":["y","n"]}
         ]
         self.update_values()
 
@@ -260,18 +260,19 @@ def view_settings(notification = ""): # displays setting sections in the termina
         print("The following settings alter how the test data is generated:\n")
 
         print("1. File and folder settings")
-        print("2. Data generation settings")
-        print("3. Image generation settings")  
-        print("4. Logging settings")  
+        print("2. File compression settings")
+        print("3. Data generation settings")
+        print("4. Image generation settings")  
+        print("5. Logging settings")  
 
         option = input(notification + "\nEnter the section number (1 to 3) to view the settings for that section, or:\nq. Quit\n\nOption:")
 
         if option == "q":
             menu()
         elif option.isdigit():
-            if int(option) <= 4:
+            if int(option) <= 5:
                 view_setting_group(int(option) - 1)
-            elif int(option) > 4:
+            elif int(option) > 5:
                 view_settings("\nNo section with the number " + option + "...\n")
         else:
             view_settings("\nInvalid option...\n")
@@ -1069,9 +1070,10 @@ def menu(notification = ""): # main menu, first thing the user will see
     else:
         menu("\nInvalid option...\n")
 
-version = "v0.9.0-" + str(subprocess.check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip())[:7]
-
+clear()
 print("Loading...")
+
+version = "v0.9.0-" + str(subprocess.check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip())[:7]
 
 settings.update_settings_file()
 menu()
