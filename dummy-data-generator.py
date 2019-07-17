@@ -664,6 +664,8 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                                 daycode = 5
                             elif datestring.lower() == "sunday":
                                 daycode = 6
+                            elif datestring.lower() == "day":
+                                daycode = datetime.date.today().weekday()
                             else:
                                 notification = "\nInvalid day specified."
                                 break
@@ -671,7 +673,7 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                             logger.add_log_entry("Datestring is " + datestring + ". Daycode is " + str(daycode) + ". Current date is " + str(currentdate) + ".", True)
 
                             while currentdatecount != datecount:
-                                if currentdate.weekday() != daycode:
+                                if currentdate.weekday() != daycode and datestring != "day":
                                     daysahead = daycode - currentdate.weekday()
 
                                     if daysahead <= 0: # Target day already happened this week
@@ -680,7 +682,11 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                                     currentdate = currentdate + datetime.timedelta(daysahead)
                                     columns.json.append({"name":currentdate.strftime("%d/%m/%y"), "value":columnvalue})
                                 else:
-                                    currentdate = currentdate + datetime.timedelta(7)
+                                    if datestring.lower() != "day":
+                                        currentdate = currentdate + datetime.timedelta(7)
+                                    else:
+                                        currentdate = currentdate + datetime.timedelta(1)
+
                                     columns.json.append({"name":currentdate.strftime("%d/%m/%y"), "value":columnvalue})                                
                         
                                 currentdatecount += 1
@@ -888,12 +894,21 @@ def get_values(value, rownumber): # reads the value for each column, and process
             randomlist = False
             orderedlist = False
             innervalue = False
+            multivalue = False
+            multivaluenumber = ""
 
             while True:
                 currentindex = currentindex + 1
 
                 if value[currentindex] == "|" or (value[currentindex] == "," and innervalue == False):
-                    values.append(tempstring)
+                    if multivalue == False:
+                        values.append(tempstring)
+                    elif multivalue == True:
+                        for count in range (1, int(multivaluenumber) + 1):
+                            values.append(tempstring)
+                        multivalue = False
+                        multivaluenumber = ""
+
                     tempstring = ""
 
                     if value[currentindex] == "|":
@@ -903,9 +918,20 @@ def get_values(value, rownumber): # reads the value for each column, and process
                         randomlist = False
                         orderedlist = True                        
 
+                elif value[currentindex] == "#":
+                    multivalue = True
+
                 elif value[currentindex] == "]":
-                    values.append(tempstring)
+                    if multivalue == False:
+                        values.append(tempstring)
+                    elif multivalue == True:
+                        for count in range (1, int(multivaluenumber) + 1):
+                            values.append(tempstring)
+                        multivalue = False
+                        multivaluenumber = ""
+
                     valuedict.valuelists[value].set_list(values)
+                    #logger.add_log_entry(str(valuedict.valuelists[value].list), True)
                     values = []
 
                     if randomlist:
@@ -916,7 +942,10 @@ def get_values(value, rownumber): # reads the value for each column, and process
                     break
                 
                 else:
-                    tempstring = tempstring + value[currentindex]
+                    if multivalue == True:
+                        multivaluenumber = multivaluenumber + value[currentindex]                       
+                    else:
+                        tempstring = tempstring + value[currentindex]
 
                     if value[currentindex] == "(":
                         innervalue = True
@@ -1024,6 +1053,7 @@ def get_demo_rows(notification = "", rownumber = None): # generates and prints o
         else:
             get_demo_rows("", rownumber) 
     except ValueError as err:
+        logger.add_log_entry(str(err), True)
         menu("\nAn error occurred during generation of example data: Invalid value specified for column " + str(currentcolumn + 1) + " - " + str(columns.json[currentcolumn]) + "\n")     
 
 def create_file(notification = ""): # creates and writes the file
