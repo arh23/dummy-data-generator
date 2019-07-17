@@ -633,73 +633,7 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                 columnvalue = input("Enter the value of the new column: ")
 
                 if columnname[0] == "{": 
-                    datestring = ""
-                    daycode = 0
-                    currentdate = datetime.date.today()
-                    multipledates = False
-                    tempdatecount = ""
-                    datecount = 1
-                    currentindex = 0
-                    currentdatecount = 0
-
-                    while True:
-                        currentindex = currentindex + 1                     
-
-                        if columnname[currentindex] == "}":
-
-                            if tempdatecount != "":
-                                datecount = int(tempdatecount)
-
-                            if datestring.lower() == "monday":
-                                daycode = 0
-                            elif datestring.lower() == "tuesday":
-                                daycode = 1
-                            elif datestring.lower() == "wednesday":
-                                daycode = 2
-                            elif datestring.lower() == "thursday":
-                                daycode = 3
-                            elif datestring.lower() == "friday":
-                                daycode = 4
-                            elif datestring.lower() == "saturday":
-                                daycode = 5
-                            elif datestring.lower() == "sunday":
-                                daycode = 6
-                            elif datestring.lower() == "day":
-                                daycode = datetime.date.today().weekday()
-                            else:
-                                notification = "\nInvalid day specified."
-                                break
-
-                            logger.add_log_entry("Datestring is " + datestring + ". Daycode is " + str(daycode) + ". Current date is " + str(currentdate) + ".", True)
-
-                            while currentdatecount != datecount:
-                                if currentdate.weekday() != daycode and datestring != "day":
-                                    daysahead = daycode - currentdate.weekday()
-
-                                    if daysahead <= 0: # Target day already happened this week
-                                        daysahead += 7
-
-                                    currentdate = currentdate + datetime.timedelta(daysahead)
-                                    columns.json.append({"name":currentdate.strftime("%d/%m/%y"), "value":columnvalue})
-                                else:
-                                    if datestring.lower() != "day":
-                                        currentdate = currentdate + datetime.timedelta(7)
-                                    else:
-                                        currentdate = currentdate + datetime.timedelta(1)
-
-                                    columns.json.append({"name":currentdate.strftime("%d/%m/%y"), "value":columnvalue})                                
-                        
-                                currentdatecount += 1
-                            break
-
-                        else:
-                            if columnname[currentindex] == "#":
-                                multipledates = True
-                            else:
-                                if multipledates:
-                                    tempdatecount += columnname[currentindex]
-                                else:
-                                    datestring = datestring + columnname[currentindex]
+                	generate_columns(columnname, columnvalue)
                 else:
                     columns.json.append({"name":columnname, "value":columnvalue})
 
@@ -721,6 +655,75 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                     notification = "\nColumn NOT deleted!\n"
             else:
                 notification = "\nInvalid " + mode + " or option...\n"
+
+def generate_columns(name, value):
+    datestring = ""
+    daycode = 0
+    currentdate = datetime.date.today()
+    multipledates = False
+    tempdatecount = ""
+    datecount = 1
+    currentindex = 0
+    currentdatecount = 0
+
+    while True:
+        currentindex = currentindex + 1                     
+
+        if name[currentindex] == "}":
+
+            if tempdatecount != "":
+                datecount = int(tempdatecount)
+
+            if datestring.lower() == "monday":
+                daycode = 0
+            elif datestring.lower() == "tuesday":
+                daycode = 1
+            elif datestring.lower() == "wednesday":
+                daycode = 2
+            elif datestring.lower() == "thursday":
+                daycode = 3
+            elif datestring.lower() == "friday":
+                daycode = 4
+            elif datestring.lower() == "saturday":
+                daycode = 5
+            elif datestring.lower() == "sunday":
+                daycode = 6
+            elif datestring.lower() == "day":
+                daycode = datetime.date.today().weekday()
+            else:
+                notification = "\nInvalid day specified."
+                break
+
+            logger.add_log_entry("Datestring is " + datestring + ". Daycode is " + str(daycode) + ". Current date is " + str(currentdate) + ".", True)
+
+            while currentdatecount != datecount:
+                if currentdate.weekday() != daycode and datestring != "day":
+                    daysahead = daycode - currentdate.weekday()
+
+                    if daysahead <= 0: # Target day already happened this week
+                        daysahead += 7
+
+                    currentdate = currentdate + datetime.timedelta(daysahead)
+                    columns.json.append({"name":currentdate.strftime("%d/%m/%y"), "value":value})
+                else:
+                    if datestring.lower() != "day":
+                        currentdate = currentdate + datetime.timedelta(7)
+                    else:
+                        currentdate = currentdate + datetime.timedelta(1)
+
+                    columns.json.append({"name":currentdate.strftime("%d/%m/%y"), "value":value})                                
+        
+                currentdatecount += 1
+            break
+
+        else:
+            if name[currentindex] == "#":
+                multipledates = True            
+            else:
+                if multipledates:
+                    tempdatecount += name[currentindex]
+                else:
+                    datestring = datestring + name[currentindex]
 
 def view_one_column(index): # displays a selected column in the terminal and provides the user with more options for the particular column
     option = ""
