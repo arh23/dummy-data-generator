@@ -895,10 +895,11 @@ def get_values(value, rownumber): # reads the value for each column, and process
             values = []
             tempstring = ""
             randomlist = False
-            orderedlist = False
+            orderedlist = True
             innervalue = False
             multivalue = False
             multivaluenumber = ""
+            countvalue = False
 
             while True:
                 currentindex = currentindex + 1
@@ -924,17 +925,29 @@ def get_values(value, rownumber): # reads the value for each column, and process
                 elif value[currentindex] == "#":
                     multivalue = True
 
+                elif value[currentindex] == "+":
+                    countvalue = True
+
                 elif value[currentindex] == "]":
                     if multivalue == False:
-                        values.append(tempstring)
-                    elif multivalue == True:
-                        for count in range (1, int(multivaluenumber) + 1):
+                        if countvalue:
+                            for count in range (1, int(tempstring) + 1):
+                                values.append(str(count))
+                        else:
                             values.append(tempstring)
+                    elif multivalue == True:
+                        if countvalue:
+                            for count in range (1, int(tempstring) + 1):
+                                for innercount in range (1, int(multivaluenumber) + 1):
+                                    values.append(str(count))
+                        else:
+                            for count in range (1, int(multivaluenumber) + 1):
+                                values.append(tempstring)
                         multivalue = False
                         multivaluenumber = ""
 
                     valuedict.valuelists[value].set_list(values)
-                    #logger.add_log_entry(str(valuedict.valuelists[value].list), True)
+                    logger.add_log_entry(str(valuedict.valuelists[value].list), True)
                     values = []
 
                     if randomlist:

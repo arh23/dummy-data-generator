@@ -42,6 +42,10 @@ You can use various placeholders to generate random or incremental data, for exa
 
 - *test value [1,2,3]* - this will generate fixed text with a value selected from within the square brackets. The commas separate the values, and represent that this is "ordered", meaning that "1" will be picked first, then "2" etc. Once the end of the list is reached, it will loop back to the start.
 
+- *test value [1#10,2#10,3#10]* - this will generate the fixed text alongside the ordered list, containing 10 "1" values, 10 "2" values and 10 "3" values. The hashtag represents the additional list entries, and can be used with numbers and strings. This means that the first 10 rows of the file will be "test value 1". The next 10 will be "test value 2" etc. 
+
+- *test value [20#10+]* - this will generate the fixed test alongside the ordered list, containing the numbers 1 to 20, 10 times each. The plus sign represents the count to 20. The default value where counting is started from is 1. This operator can only be used with ranges containing a single number as per the example. This column value will generate 10 rows of "test value 1", generating 10 rows of the value for every number between 1 and 20.
+
 - *test value [(10,20)|(80,100)|(200,300)]* - this will generate fixed text with a random value that has been generated using the specified ranges. The values are generated from the specified ranges, and are then selected at random.
 
 - *test value [(10,20),(80,100),(200,300)]* - this will generate fixed text with a range value selected from within the square brackets. As per the above, the values are generated from the specified ranges, and are then selected in order. 
