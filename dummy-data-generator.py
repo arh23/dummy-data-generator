@@ -146,7 +146,7 @@ class Settings():
             if int(setting["index"]) > len(self.json):
                 settingvalues[len(self.json) - 1] = setting["value"]                    
             else:
-                settingvalues[int(setting["index"])] = setting["value"]        
+                settingvalues[int(setting["index"])] = setting["value"]
 
         return settingvalues
 
@@ -277,10 +277,18 @@ class ValueList():
 class MultiValue():
     def __init__(self):
         self.valuelists = {}
+        self.valueliststates = {}
 
     def add_list(self, key):
         if key not in self.valuelists:
             self.valuelists[key] = ValueList()
+            self.valueliststates[key] = ""
+
+    def check_list(self, key):
+        if key not in self.valuelists:
+            return False
+        else:
+            return True
 
     def reset_indexes(self):
         for valuelist in self.valuelists:
@@ -891,83 +899,98 @@ def get_values(value, rownumber): # reads the value for each column, and process
                     break
 
         elif value[currentindex] == "[":
-            valuedict.add_list(value)
-            values = []
-            tempstring = ""
-            randomlist = False
-            orderedlist = True
-            innervalue = False
-            multivalue = False
-            multivaluenumber = ""
-            countvalue = False
+            if valuedict.check_list(value) == False:
+                valuedict.add_list(value)
+                valuedict.valueliststates[value] = "ordered"
+                values = []
+                tempstring = ""
+                randomlist = False
+                orderedlist = True
+                innervalue = False
+                multivalue = False
+                multivaluenumber = ""
+                countvalue = False
 
-            while True:
-                currentindex = currentindex + 1
+                while True:
+                    currentindex = currentindex + 1
 
-                if value[currentindex] == "|" or (value[currentindex] == "," and innervalue == False):
-                    if multivalue == False:
-                        values.append(tempstring)
-                    elif multivalue == True:
-                        for count in range (1, int(multivaluenumber) + 1):
+                    if value[currentindex] == "|" or (value[currentindex] == "," and innervalue == False):
+                        if multivalue == False:
                             values.append(tempstring)
-                        multivalue = False
-                        multivaluenumber = ""
-
-                    tempstring = ""
-
-                    if value[currentindex] == "|":
-                        randomlist = True
-                        orderedlist = False
-                    elif value[currentindex] == ",":
-                        randomlist = False
-                        orderedlist = True                        
-
-                elif value[currentindex] == "#":
-                    multivalue = True
-
-                elif value[currentindex] == "+":
-                    countvalue = True
-
-                elif value[currentindex] == "]":
-                    if multivalue == False:
-                        if countvalue:
-                            for count in range (1, int(tempstring) + 1):
-                                values.append(str(count))
-                        else:
-                            values.append(tempstring)
-                    elif multivalue == True:
-                        if countvalue:
-                            for count in range (1, int(tempstring) + 1):
-                                for innercount in range (1, int(multivaluenumber) + 1):
-                                    values.append(str(count))
-                        else:
+                        elif multivalue == True:
                             for count in range (1, int(multivaluenumber) + 1):
                                 values.append(tempstring)
-                        multivalue = False
-                        multivaluenumber = ""
+                            multivalue = False
+                            multivaluenumber = ""
 
-                    valuedict.valuelists[value].set_list(values)
-                    logger.add_log_entry(str(valuedict.valuelists[value].list), True)
-                    values = []
+                        tempstring = ""
 
-                    if randomlist:
-                        output = output + valuedict.valuelists[value].get_random_list_value()
-                    elif orderedlist:
-                        output = output + valuedict.valuelists[value].get_next_list_value()
+                        if value[currentindex] == "|":
+                            randomlist = True
+                            orderedlist = False
+                        elif value[currentindex] == ",":
+                            randomlist = False
+                            orderedlist = True                        
 
-                    break
-                
-                else:
-                    if multivalue == True:
-                        multivaluenumber = multivaluenumber + value[currentindex]                       
+                    elif value[currentindex] == "#":
+                        multivalue = True
+
+                    elif value[currentindex] == "+":
+                        countvalue = True
+
+                    elif value[currentindex] == "]":
+                        if multivalue == False:
+                            if countvalue:
+                                for count in range (1, int(tempstring) + 1):
+                                    values.append(str(count))
+                            else:
+                                values.append(tempstring)
+                        elif multivalue == True:
+                            if countvalue:
+                                for count in range (1, int(tempstring) + 1):
+                                    for innercount in range (1, int(multivaluenumber) + 1):
+                                        values.append(str(count))
+                            else:
+                                for count in range (1, int(multivaluenumber) + 1):
+                                    values.append(tempstring)
+                            multivalue = False
+                            multivaluenumber = ""
+
+                        valuedict.valuelists[value].set_list(values)
+                        #logger.add_log_entry(str(valuedict.valuelists[value].list), True)
+                        values = []
+
+                        if randomlist:
+                            valuedict.valueliststates[value] = "random"
+                            output = output + valuedict.valuelists[value].get_random_list_value()
+                        elif orderedlist:
+                            valuedict.valueliststates[value] = "ordered"
+                            output = output + valuedict.valuelists[value].get_next_list_value()
+
+                        break
+                    
                     else:
-                        tempstring = tempstring + value[currentindex]
+                        if multivalue == True:
+                            multivaluenumber = multivaluenumber + value[currentindex]                       
+                        else:
+                            tempstring = tempstring + value[currentindex]
 
-                    if value[currentindex] == "(":
-                        innervalue = True
-                    if value[currentindex] == ")":
-                        tempstring = get_values(tempstring, rownumber)
-                        innervalue = False
+                        if value[currentindex] == "(":
+                            innervalue = True
+                        if value[currentindex] == ")":
+                            tempstring = get_values(tempstring, rownumber)
+                            innervalue = False
+            elif valuedict.check_list(value):
+                if valuedict.valueliststates[value] == "random":
+                    output = output + valuedict.valuelists[value].get_random_list_value()
+                elif valuedict.valueliststates[value] == "ordered":
+                    output = output + valuedict.valuelists[value].get_next_list_value()
+
+                while True:
+                    if value[currentindex] != "]":
+                        currentindex = currentindex + 1
+                    else:
+                        break
 
         elif value[currentindex] == "+":
             output = output + str(rownumber)
