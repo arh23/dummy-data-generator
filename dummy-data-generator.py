@@ -1168,12 +1168,17 @@ def write_file(file):
                     headers.append(columns.json[y]["name"])
 
                 logger.add_log_entry("Writing headers: " + str([headers]))
+                clear()
+                print("Writing column headers...")
                 writer.writerows([headers])
 
                 values = []
 
                 logger.add_log_entry("Generating values from: " + str(columns.json))
                 for z in range (1, int(settings.numberofrows) + 1):
+                    if (z % 100) == 0:
+                        clear()
+                        print("Generating values... \n" + str(z) + " rows out of " + settings.numberofrows + " generated.")
                     for x in range (0, columns.get_columns_total()):
                         values.append(get_values(columns.json[x]["value"], int(settings.rownumber) + z))
                         currentcolumn += 1
@@ -1188,11 +1193,16 @@ def write_file(file):
             sheet = book.add_sheet(sheetname)
 
             logger.add_log_entry("Writing headers into xls file.")
+            clear()
+            print("Writing column headers...")
             for y in range (0, columns.get_columns_total()):
                 sheet.write(0, y, columns.json[y]["name"])
 
             logger.add_log_entry("Generating values from: " + str(columns.json))
             for z in range (1, int(settings.numberofrows) + 1):
+                if (z % 100) == 0:
+                    clear()
+                    print("Generating values... \n" + str(z) + " rows out of " + settings.numberofrows + " generated.")
                 for x in range (0, columns.get_columns_total()):
                     sheet.write(z, x, get_values(columns.json[x]["value"], int(settings.rownumber) + z))
 
