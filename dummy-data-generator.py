@@ -665,14 +665,16 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                 notification = "\nInvalid " + mode + " or option...\n"
 
 def generate_columns(name, value):
+    currentindex = 0
+    currentdate = datetime.date.today()
     datestring = ""
     daycode = 0
-    currentdate = datetime.date.today()
     multipledates = False
     tempdatecount = ""
     datecount = 1
-    currentindex = 0
     currentdatecount = 0
+    readformat = False
+    formatstring = "%d/%m/%y"
 
     while True:
         currentindex = currentindex + 1                     
@@ -712,24 +714,31 @@ def generate_columns(name, value):
                         daysahead += 7
 
                     currentdate = currentdate + datetime.timedelta(daysahead)
-                    columns.json.append({"name":currentdate.strftime("%d/%m/%y"), "value":value})
+                    columns.json.append({"name":currentdate.strftime(formatstring), "value":value})
                 else:
                     if datestring.lower() != "day":
                         currentdate = currentdate + datetime.timedelta(7)
                     else:
                         currentdate = currentdate + datetime.timedelta(1)
 
-                    columns.json.append({"name":currentdate.strftime("%d/%m/%y"), "value":value})                                
+                    columns.json.append({"name":currentdate.strftime(formatstring), "value":value})                                
         
                 currentdatecount += 1
             break
 
         else:
             if name[currentindex] == "#":
-                multipledates = True            
+                readformat = False
+                multipledates = True
+            elif name[currentindex] == "!":
+                multipledates = False
+                readformat = True
+                formatstring = ""          
             else:
                 if multipledates:
                     tempdatecount += name[currentindex]
+                elif readformat:
+                    formatstring += name[currentindex]  
                 else:
                     datestring = datestring + name[currentindex]
 
