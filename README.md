@@ -22,6 +22,16 @@ pip install -r requirements.txt
 
 The columns can be modified through the script or via a text editor. 
 
+##### Column names
+
+Column names can either be a fixed string, or a generated number of day/dates. These date columns can be generated for any day, for any number of dates, and in any format. 
+
+For example, *{monday!%d-%b-%Y#10}* will generate 10 columns, starting on the next Monday in the calendar for the specified format:
+
+- *{monday* - the date column name must *start and end* with a brace, alongside the specified day. This value can be any weekday (which will start at the *next* occurence of this day in the calendar), or set to *day* for every day, starting the next day in the calendar. This value is case insensitive.
+- *!%d-%b-%Y* - the format specification must start with an exclamation mark. The format can be any datetime standard format string. If the format is not specified, the dates will be generated using the format *dd/mm/yy*.
+- *#10}* - the number of columns to be generated is specified by the hash. Specifying the number of columns is optional, by default, only 1 column is created if the number of columns isn't specified.
+
 ##### Column values
 
 You can use various placeholders to generate random or incremental data, for example, see the following column values:
