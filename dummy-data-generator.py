@@ -56,7 +56,7 @@ class Settings():
             {"section":2, "index":8, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
             {"section":2, "index":9, "key":"min", "desc":"The minimum value generated with the '?' symbol", "value":"1"},
             {"section":2, "index":10, "key":"max", "desc":"The maximum value generated with the '?' symbol", "value":"1000000"},
-            {"section":3, "index":14, "key":"imagemode", "desc":"The way the image is generated", "value":"random", "acceptedvalues":["random","single","row"]}, 
+            {"section":3, "index":14, "key":"imagemode", "desc":"The way the image is generated", "value":"random", "acceptedvalues":["random","single","row","grid"]}, 
             {"section":3, "index":15, "key":"imageheight", "desc":"The height of the generated image", "value":"100"}, 
             {"section":3, "index":16, "key":"imagewidth", "desc":"The width of the generated image", "value":"100"}, 
             {"section":3, "index":23, "key":"rowheight", "desc":"The pixel height of rows generated in 'row' mode", "value":"1"}, 
@@ -66,6 +66,8 @@ class Settings():
             {"section":3, "index":20, "key":"gmax", "desc":"The maximum value for random green intensity", "value":"255"}, 
             {"section":3, "index":21, "key":"bmin", "desc":"The minimum value for random blue intensity", "value":"0"}, 
             {"section":3, "index":22, "key":"bmax", "desc":"The maximum value for random blue intensity", "value":"255"},
+            {"section":3, "index":26, "key":"gridheight", "desc":"The vertical distance between grid lines", "value":"20"},
+            {"section":3, "index":27, "key":"gridwidth", "desc":"The horizontal distance between grid lines", "value":"20"},
             {"section":4, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n", "acceptedvalues":["y","n"]}
         ]
         self.update_values()
@@ -1227,29 +1229,46 @@ def write_file(file):
             green = 0
             blue = 0
 
-            if settings.imagemode == "single":
+            if settings.imagemode != "grid":
+                if settings.imagemode == "single":
+                    red = int(settings.rmax)
+                    green = int(settings.gmax)
+                    blue = int(settings.bmax)
+
+                for x in range (0, int(settings.imageheight)):
+                    if settings.imagemode == "row":
+                        if x % int(settings.rowheight) == 0:
+                            red = random.randint(int(settings.rmin), int(settings.rmax))
+                            green = random.randint(int(settings.gmin), int(settings.gmax))
+                            blue = random.randint(int(settings.bmin), int(settings.bmax))
+
+                    for y in range (0, int(settings.imagewidth)):
+                        if settings.imagemode == "random":
+                            pixels.append(
+                                (
+                                    (random.randint(int(settings.rmin), int(settings.rmax))),
+                                    (random.randint(int(settings.gmin), int(settings.gmax))),
+                                    (random.randint(int(settings.bmin), int(settings.bmax)))
+                                )
+                            )
+                        else:
+                            pixels.append((red, green, blue))                     
+            else:
                 red = int(settings.rmax)
                 green = int(settings.gmax)
                 blue = int(settings.bmax)
 
-            for x in range (0, int(settings.imageheight)):
-                if settings.imagemode == "row":
-                    if x % int(settings.rowheight) == 0:
-                        red = random.randint(int(settings.rmin), int(settings.rmax))
-                        green = random.randint(int(settings.gmin), int(settings.gmax))
-                        blue = random.randint(int(settings.bmin), int(settings.bmax))
+                for x in range (0, int(settings.imageheight)): # rows
 
-                for y in range (0, int(settings.imagewidth)):
-                    if settings.imagemode == "random":
-                        pixels.append(
-                            (
-                                (random.randint(int(settings.rmin), int(settings.rmax))),
-                                (random.randint(int(settings.gmin), int(settings.gmax))),
-                                (random.randint(int(settings.bmin), int(settings.bmax)))
-                            )
-                        )
-                    else:
-                        pixels.append((red, green, blue))                       
+                    for y in range (0, int(settings.imagewidth)): # columns
+                        if x % (int(settings.gridheight) + 1) == 0: # if row mod grid height
+                            pixels.append((red, green, blue))                               
+                        else:
+                            if y % (int(settings.gridwidth) + 1) == 0:
+                                pixels.append((red, green, blue))
+                            else:
+                                pixels.append((255, 255, 255))
+
 
             logger.add_log_entry("RGB values generated: " + str(pixels[:10]) + (", " + str((len(pixels) - 10)) + " more RGB values." if int(len(pixels)) > 10 else ""), True)
 
@@ -1270,7 +1289,7 @@ def write_file(file):
             menu("\nAn error occurred during file generation: Invalid value specified for column " + str(currentcolumn + 1) + " - " + str(columns.json[currentcolumn]) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime))     
         else:
             logger.add_log_entry("ERROR - " + str(err) + ", took %.2f seconds before failing." % (time.time() - starttime), True)
-            menu("\nAn error occurred during image generation: " + str(err) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime))     
+            menu("\nAn error occurred during image generation: " + str(err) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime))
 
 def compress_file(file): # compress the generated file, if compression is enabled
     try:
