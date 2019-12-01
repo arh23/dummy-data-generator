@@ -251,6 +251,97 @@ class Columns():
     def get_columns_total(self): # returns number of different columns in the column json data
         return len(self.json)
 
+    def create_column(self, name, value):
+        self.json.append({"name":name, "value":value})
+
+        self.update_column_data()
+
+        notification = "New column '" + self.json[int(self.get_columns_total() - 1)]["name"] + "' added!"
+        return notification
+
+    def generate_columns(self, name, value):
+        currentindex = 0
+        currentdate = datetime.date.today()
+        datestring = ""
+        daycode = 0
+        multipledates = False
+        tempdatecount = ""
+        datecount = 1
+        currentdatecount = 0
+        readformat = False
+        formatstring = "%d/%m/%y"
+
+        while True:
+            currentindex = currentindex + 1
+
+            if name[currentindex] == "}":
+
+                if tempdatecount != "":
+                    datecount = int(tempdatecount)
+
+                if datestring.lower() == "monday":
+                    daycode = 0
+                elif datestring.lower() == "tuesday":
+                    daycode = 1
+                elif datestring.lower() == "wednesday":
+                    daycode = 2
+                elif datestring.lower() == "thursday":
+                    daycode = 3
+                elif datestring.lower() == "friday":
+                    daycode = 4
+                elif datestring.lower() == "saturday":
+                    daycode = 5
+                elif datestring.lower() == "sunday":
+                    daycode = 6
+                elif datestring.lower() == "day":
+                    daycode = datetime.date.today().weekday()
+                else:
+                    notification = "Invalid day specified."
+                    return notification
+                    break
+
+                logger.add_log_entry("Datestring is " + datestring + ". Daycode is " + str(daycode) + ". Current date is " + str(currentdate) + ".", True)
+
+                while currentdatecount != datecount:
+                    if currentdate.weekday() != daycode and datestring != "day":
+                        daysahead = daycode - currentdate.weekday()
+
+                        if daysahead <= 0: # Target day already happened this week
+                            daysahead += 7
+
+                        currentdate = currentdate + datetime.timedelta(daysahead)
+                        self.json.append({"name":currentdate.strftime(formatstring), "value":value})
+                    else:
+                        if datestring.lower() != "day":
+                            currentdate = currentdate + datetime.timedelta(7)
+                        else:
+                            currentdate = currentdate + datetime.timedelta(1)
+
+                        self.json.append({"name":currentdate.strftime(formatstring), "value":value})
+            
+                    currentdatecount += 1
+                break
+
+            else:
+                if name[currentindex] == "#":
+                    readformat = False
+                    multipledates = True
+                elif name[currentindex] == "!":
+                    multipledates = False
+                    readformat = True
+                    formatstring = ""          
+                else:
+                    if multipledates:
+                        tempdatecount += name[currentindex]
+                    elif readformat:
+                        formatstring += name[currentindex]  
+                    else:
+                        datestring = datestring + name[currentindex]
+
+        self.update_column_data()
+        notification = "New column '" + self.json[int(self.get_columns_total() - 1)]["name"] + "' added!"
+        return notification
+
 columns = Columns()
 
 class ValueList():
@@ -297,6 +388,83 @@ class MultiValue():
             self.valuelists[valuelist].reset_index()
 
 valuedict = MultiValue()
+
+class ImageGenerator():
+    def __init__(self):
+        self.pixels = []
+        self.red = 0
+        self.green = 0
+        self.blue = 0
+
+    def generate_grid_image(self):
+        self.red = int(settings.rmax)
+        self.green = int(settings.gmax)
+        self.blue = int(settings.bmax)
+
+        for x in range (0, int(settings.imageheight)): # rows
+
+            for y in range (0, int(settings.imagewidth)): # columns
+                if x % (int(settings.gridheight) + 1) == 0: # if row mod grid height
+                    self.pixels.append((self.red, self.green, self.blue))                               
+                else:
+                    if y % (int(settings.gridwidth) + 1) == 0:
+                        self.pixels.append((self.red, self.green, self.blue))
+                    else:
+                        self.pixels.append((255, 255, 255))
+
+    def generate_single_image(self):
+        self.red = int(settings.rmax)
+        self.green = int(settings.gmax)
+        self.blue = int(settings.bmax)
+
+        for x in range (0, int(settings.imageheight)):
+            for y in range (0, int(settings.imagewidth)):
+                self.pixels.append((self.red, self.green, self.blue))
+
+    def generate_row_image(self):
+        for x in range (0, int(settings.imageheight)):
+            if x % int(settings.rowheight) == 0:
+                self.red = random.randint(int(settings.rmin), int(settings.rmax))
+                self.green = random.randint(int(settings.gmin), int(settings.gmax))
+                self.blue = random.randint(int(settings.bmin), int(settings.bmax))
+
+            for y in range (0, int(settings.imagewidth)):
+                self.pixels.append((self.red, self.green, self.blue))
+
+    def generate_random_image(self):
+        for x in range (0, int(settings.imageheight)):
+            for y in range (0, int(settings.imagewidth)):
+                    self.pixels.append(
+                        (
+                            (random.randint(int(settings.rmin), int(settings.rmax))),
+                            (random.randint(int(settings.gmin), int(settings.gmax))),
+                            (random.randint(int(settings.bmin), int(settings.bmax)))
+                        )
+                    )
+                  
+    def generate_image(self, file):
+        img = Image.new('RGB', (int(settings.imagewidth), int(settings.imageheight)))
+
+        if settings.imagemode == "single":
+            self.generate_single_image()
+        elif settings.imagemode == "row":
+            self.generate_row_image()
+        elif settings.imagemode == "random":
+            self.generate_random_image()
+        elif settings.imagemode == "grid":
+            self.generate_grid_image()
+
+        logger.add_log_entry("RGB values generated: " + str(self.pixels[:10]) + (", " + str((len(self.pixels) - 10)) + " more RGB values." if int(len(self.pixels)) > 10 else ""), True)
+
+        img.putdata(self.pixels)
+        img.save(file)
+
+        self.pixels = []
+        self.red = 0
+        self.green = 0
+        self.blue = 0
+
+imageGenerator = ImageGenerator()
 
 def clear(platformname = sys.platform): # clear the terminal buffer ~ NOTE: this seems to be quite buggy, need to come back to this
     if platformname == "win32":
@@ -600,7 +768,7 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                     print(str(y) + ". " + columns.json[y - 1]["name"] + " - " + columns.json[y - 1]["value"])
                     count = y
 
-                option = input(notification + "\nEnter a number (1 to " + str(columns.get_columns_total()) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\n\nOption:")
+                option = input("\n" + notification + "\nEnter a number (1 to " + str(columns.get_columns_total()) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\n\nOption:")
 
             elif mode == "preset":
                 print("The following presets are currently defined:\n")
@@ -609,7 +777,7 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                     print(str(y) + ". " + presets.json[y - 1]["name"] + " - " + (presets.json[y - 1]["value"] if presets.json[y - 1]["value"] != "" else "<No value>"))
                     count = y
 
-                option = input(notification + "\nEnter a number (1 to " + str(len(presets.json)) + ") to edit the preset, or:\nq. Quit\n\nOption:")
+                option = input("\n" + notification + "\nEnter a number (1 to " + str(len(presets.json)) + ") to edit the preset, or:\nq. Quit\n\nOption:")
 
             if option == "q":
                 menu()
@@ -627,122 +795,41 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                         inputvalue = input("\nEnter a new preset setting value for setting number " + str(option) + ": ")
                         
                         if len(acceptedvalues) != 0 and inputvalue not in acceptedvalues and inputvalue != "":
-                            notification = "\nValue is not valid for current setting, valid values are " + str(acceptedvalues) + ".\n"
+                            notification = "Value is not valid for current setting, valid values are " + str(acceptedvalues) + ".\n"
                         else:
                             presets.json[int(option) - 1]["value"] = inputvalue
-                            notification = "\nPreset setting updated.\n"                            
+                            notification = "Preset setting updated.\n"                            
 
                         presets.update_preset()
                 elif int(option) > count:
                     if mode == "column":
-                        notification = "\nNo column " + option + "...\n"
+                        notification = "No column " + option + "...\n"
                     elif mode == "preset":
-                        notification = "\nNo preset " + option + "...\n"
+                        notification = "No preset " + option + "...\n"
             elif mode == "column" and option == "+":
                 columnname = input("\nEnter the name of the new column: ")
                 columnvalue = input("Enter the value of the new column: ")
 
                 if columnname[0] == "{": 
-                	generate_columns(columnname, columnvalue)
+                    notification = columns.generate_columns(columnname, columnvalue) + "\n"
                 else:
-                    columns.json.append({"name":columnname, "value":columnvalue})
+                    notification = columns.create_column(columnname, columnvalue) + "\n"
 
-                columns.update_column_data()
-
-                notification = "\nNew column '" + columns.json[int(columns.get_columns_total() - 1)]["name"] + "' added!\n"
-                logger.add_log_entry("New column '" + columns.json[int(columns.get_columns_total() - 1)]["name"] + "' added!", True)
+                logger.add_log_entry(notification, True)
             elif mode == "column" and option == "x":
                 index = int(input("\nEnter the column number you want to delete: ")) - 1
                 confirm = input("Are you sure you want to delete column " + str(index + 1) + "? y/n\n")
 
                 if confirm == "y":
-                    notification = "\nColumn '" + columns.json[index]["name"] + "' deleted!\n"
+                    notification = "Column '" + columns.json[index]["name"] + "' deleted!\n"
                     logger.add_log_entry("Column '" + columns.json[index]["name"] + "' deleted!", True)
 
                     columns.json.pop(index)
                     columns.update_column_data()
                 else:
-                    notification = "\nColumn NOT deleted!\n"
+                    notification = "Column NOT deleted!\n"
             else:
-                notification = "\nInvalid " + mode + " or option...\n"
-
-def generate_columns(name, value):
-    currentindex = 0
-    currentdate = datetime.date.today()
-    datestring = ""
-    daycode = 0
-    multipledates = False
-    tempdatecount = ""
-    datecount = 1
-    currentdatecount = 0
-    readformat = False
-    formatstring = "%d/%m/%y"
-
-    while True:
-        currentindex = currentindex + 1                     
-
-        if name[currentindex] == "}":
-
-            if tempdatecount != "":
-                datecount = int(tempdatecount)
-
-            if datestring.lower() == "monday":
-                daycode = 0
-            elif datestring.lower() == "tuesday":
-                daycode = 1
-            elif datestring.lower() == "wednesday":
-                daycode = 2
-            elif datestring.lower() == "thursday":
-                daycode = 3
-            elif datestring.lower() == "friday":
-                daycode = 4
-            elif datestring.lower() == "saturday":
-                daycode = 5
-            elif datestring.lower() == "sunday":
-                daycode = 6
-            elif datestring.lower() == "day":
-                daycode = datetime.date.today().weekday()
-            else:
-                notification = "\nInvalid day specified."
-                break
-
-            logger.add_log_entry("Datestring is " + datestring + ". Daycode is " + str(daycode) + ". Current date is " + str(currentdate) + ".", True)
-
-            while currentdatecount != datecount:
-                if currentdate.weekday() != daycode and datestring != "day":
-                    daysahead = daycode - currentdate.weekday()
-
-                    if daysahead <= 0: # Target day already happened this week
-                        daysahead += 7
-
-                    currentdate = currentdate + datetime.timedelta(daysahead)
-                    columns.json.append({"name":currentdate.strftime(formatstring), "value":value})
-                else:
-                    if datestring.lower() != "day":
-                        currentdate = currentdate + datetime.timedelta(7)
-                    else:
-                        currentdate = currentdate + datetime.timedelta(1)
-
-                    columns.json.append({"name":currentdate.strftime(formatstring), "value":value})                                
-        
-                currentdatecount += 1
-            break
-
-        else:
-            if name[currentindex] == "#":
-                readformat = False
-                multipledates = True
-            elif name[currentindex] == "!":
-                multipledates = False
-                readformat = True
-                formatstring = ""          
-            else:
-                if multipledates:
-                    tempdatecount += name[currentindex]
-                elif readformat:
-                    formatstring += name[currentindex]  
-                else:
-                    datestring = datestring + name[currentindex]
+                notification = "Invalid " + mode + " or option...\n"
 
 def view_one_column(index): # displays a selected column in the terminal and provides the user with more options for the particular column
     option = ""
@@ -1221,59 +1308,7 @@ def write_file(file):
             book.save(file)
 
         elif settings.fileformat in settings.imageformats:
-            img = Image.new('RGB', (int(settings.imagewidth), int(settings.imageheight)))
-
-            pixels = []
-
-            red = 0
-            green = 0
-            blue = 0
-
-            if settings.imagemode != "grid":
-                if settings.imagemode == "single":
-                    red = int(settings.rmax)
-                    green = int(settings.gmax)
-                    blue = int(settings.bmax)
-
-                for x in range (0, int(settings.imageheight)):
-                    if settings.imagemode == "row":
-                        if x % int(settings.rowheight) == 0:
-                            red = random.randint(int(settings.rmin), int(settings.rmax))
-                            green = random.randint(int(settings.gmin), int(settings.gmax))
-                            blue = random.randint(int(settings.bmin), int(settings.bmax))
-
-                    for y in range (0, int(settings.imagewidth)):
-                        if settings.imagemode == "random":
-                            pixels.append(
-                                (
-                                    (random.randint(int(settings.rmin), int(settings.rmax))),
-                                    (random.randint(int(settings.gmin), int(settings.gmax))),
-                                    (random.randint(int(settings.bmin), int(settings.bmax)))
-                                )
-                            )
-                        else:
-                            pixels.append((red, green, blue))                     
-            else:
-                red = int(settings.rmax)
-                green = int(settings.gmax)
-                blue = int(settings.bmax)
-
-                for x in range (0, int(settings.imageheight)): # rows
-
-                    for y in range (0, int(settings.imagewidth)): # columns
-                        if x % (int(settings.gridheight) + 1) == 0: # if row mod grid height
-                            pixels.append((red, green, blue))                               
-                        else:
-                            if y % (int(settings.gridwidth) + 1) == 0:
-                                pixels.append((red, green, blue))
-                            else:
-                                pixels.append((255, 255, 255))
-
-
-            logger.add_log_entry("RGB values generated: " + str(pixels[:10]) + (", " + str((len(pixels) - 10)) + " more RGB values." if int(len(pixels)) > 10 else ""), True)
-
-            img.putdata(pixels)
-            img.save(file)
+            imageGenerator.generate_image(file)
 
         return (time.time() - starttime)
     
