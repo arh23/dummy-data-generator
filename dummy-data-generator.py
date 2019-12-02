@@ -68,6 +68,10 @@ class Settings():
             {"section":3, "index":22, "key":"bmax", "desc":"The maximum value for random blue intensity", "value":"255"},
             {"section":3, "index":26, "key":"gridheight", "desc":"The vertical distance between grid lines", "value":"20"},
             {"section":3, "index":27, "key":"gridwidth", "desc":"The horizontal distance between grid lines", "value":"20"},
+            {"section":3, "index":28, "key":"gridbgmode", "desc":"The way the background of the image is generated", "value":"single", "acceptedvalues":["random","single","row"]},
+            {"section":3, "index":29, "key":"gridbgred", "desc":"The maximum value for random red intensity (for grid image backgrounds)", "value":"255"},
+            {"section":3, "index":30, "key":"gridbggreen", "desc":"The maximum value for random green intensity (for grid image backgrounds)", "value":"255"}, 
+            {"section":3, "index":31, "key":"gridbgblue", "desc":"The maximum value for random blue intensity (for grid image backgrounds)", "value":"255"},                        
             {"section":4, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n", "acceptedvalues":["y","n"]}
         ]
         self.update_values()
@@ -97,7 +101,13 @@ class Settings():
         self.gmin = self.get_setting_value("gmin")
         self.gmax = self.get_setting_value("gmax")
         self.bmin = self.get_setting_value("bmin")
-        self.bmax = self.get_setting_value("bmax")        
+        self.bmax = self.get_setting_value("bmax")
+        self.gridheight = self.get_setting_value("gridheight")
+        self.gridwidth = self.get_setting_value("gridwidth")
+        self.gridbgmode = self.get_setting_value("gridbgmode")
+        self.gridbgred = self.get_setting_value("gridbgred")   
+        self.gridbggreen = self.get_setting_value("gridbggreen")
+        self.gridbgblue = self.get_setting_value("gridbgblue")                  
         self.log = self.get_setting_value("logging")
 
     def get_settings(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
@@ -401,16 +411,30 @@ class ImageGenerator():
         self.green = int(settings.gmax)
         self.blue = int(settings.bmax)
 
-        for x in range (0, int(settings.imageheight)): # rows
+        rowcolour = ""
 
-            for y in range (0, int(settings.imagewidth)): # columns
+        for x in range (0, int(settings.imageheight)): # rows
+            for y in range (0, int(settings.imagewidth)): # columns 
                 if x % (int(settings.gridheight) + 1) == 0: # if row mod grid height
-                    self.pixels.append((self.red, self.green, self.blue))                               
+                    self.pixels.append((self.red, self.green, self.blue))
+                    if settings.gridbgmode == "row":
+                        rowcolour = (
+                            random.randint(0, int(settings.gridbgred)), 
+                            random.randint(0, int(settings.gridbggreen)), 
+                            random.randint(0, int(settings.gridbgblue))
+                        )                            
                 else:
                     if y % (int(settings.gridwidth) + 1) == 0:
                         self.pixels.append((self.red, self.green, self.blue))
                     else:
-                        self.pixels.append((255, 255, 255))
+                        if settings.gridbgmode == "row":
+                            self.pixels.append(rowcolour)
+                        elif settings.gridbgmode == "single":
+                            self.pixels.append((int(settings.gridbgred), int(settings.gridbggreen), int(settings.gridbgblue)))
+                        elif settings.gridbgmode == "random":
+                            self.pixels.append((random.randint(0, int(settings.gridbgred)), random.randint(0, int(settings.gridbggreen)), random.randint(0, int(settings.gridbgblue))))                           
+                        else:
+                            self.pixels.append((255, 255, 255))
 
     def generate_single_image(self):
         self.red = int(settings.rmax)
