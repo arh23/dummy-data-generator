@@ -1,6 +1,6 @@
 #! coding: utf-8
 from PIL import Image
-import subprocess, csv, xlwt, random, time, json, os, sys, platform, datetime, gzip, zipfile, tarfile, shutil
+import subprocess, csv, xlwt, random, time, json, os, sys, platform, datetime, gzip, zipfile, tarfile, shutil, math, traceback
 
 class Logger():
     def __init__(self):
@@ -15,14 +15,14 @@ class Logger():
         except:
             return False
 
-    def add_log_entry(self, value, write = False): # adds a new log entry
+    def add_log_entry(self, value, write = False, addspace = True): # adds a new log entry
         now = datetime.datetime.now()
         if self.get_logging_state():
             self.log.append("[" + str('%02d' % now.hour) + ":" + str('%02d' % now.minute) + ":" + str('%02d' % now.second) + "] " + value)
             if write == True:
-                self.write_log()
+                self.write_log(addspace)
 
-    def write_log(self): # writes the current log array into the log file and clears the log array
+    def write_log(self, addspace = True): # writes the current log array into the log file and clears the log array
         now = datetime.datetime.now()
         logname = "logs/log-" + str('%02d' % now.day) + "-" + str('%02d' % now.month) + "-" + str('%02d' % now.year) + ".txt"
 
@@ -31,7 +31,7 @@ class Logger():
 
         with open(logname, 'a') as logfile:
             for x in range (0, len(self.log)):
-                logfile.write(self.log[x] + "\n")
+                logfile.write(self.log[x] + "\n" if addspace == True else self.log[x])
 
         self.log = []
 
@@ -71,7 +71,8 @@ class Settings():
             {"section":3, "index":28, "key":"gridbgmode", "desc":"The way the background of the image is generated", "value":"single", "acceptedvalues":["random","single","row"]},
             {"section":3, "index":29, "key":"gridbgred", "desc":"The maximum value for random red intensity (for grid image backgrounds)", "value":"255"},
             {"section":3, "index":30, "key":"gridbggreen", "desc":"The maximum value for random green intensity (for grid image backgrounds)", "value":"255"}, 
-            {"section":3, "index":31, "key":"gridbgblue", "desc":"The maximum value for random blue intensity (for grid image backgrounds)", "value":"255"},                        
+            {"section":3, "index":31, "key":"gridbgblue", "desc":"The maximum value for random blue intensity (for grid image backgrounds)", "value":"255"},
+            {"section":3, "index":32, "key":"gridborders", "desc":"Enable the increase of image height and width to include the border edges of the grid", "value":"n", "acceptedvalues":["y","n"]},                                    
             {"section":4, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n", "acceptedvalues":["y","n"]}
         ]
         self.update_values()
@@ -107,7 +108,8 @@ class Settings():
         self.gridbgmode = self.get_setting_value("gridbgmode")
         self.gridbgred = self.get_setting_value("gridbgred")   
         self.gridbggreen = self.get_setting_value("gridbggreen")
-        self.gridbgblue = self.get_setting_value("gridbgblue")                  
+        self.gridbgblue = self.get_setting_value("gridbgblue")
+        self.gridborders = self.get_setting_value("gridborders")                          
         self.log = self.get_setting_value("logging")
 
     def get_settings(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
@@ -406,6 +408,18 @@ class ImageGenerator():
         self.green = 0
         self.blue = 0
 
+    def calculate_padding(self):
+        gridlinesize = 1 # replace with setting variable when implemented
+
+        heightmultiplier = round(int(settings.imageheight) / int(settings.gridheight))
+        logger.add_log_entry(str(heightmultiplier), True)
+
+        widthmultiplier = round(int(settings.imagewidth) / int(settings.gridwidth))
+        logger.add_log_entry(str(widthmultiplier), True)
+
+        settings.imageheight = (int(settings.gridheight) * heightmultiplier) + (heightmultiplier * gridlinesize) + gridlinesize
+        settings.imagewidth = (int(settings.gridwidth) * widthmultiplier) + (widthmultiplier * gridlinesize) + gridlinesize
+
     def generate_grid_image(self):
         self.red = int(settings.rmax)
         self.green = int(settings.gmax)
@@ -467,6 +481,9 @@ class ImageGenerator():
                     )
                   
     def generate_image(self, file):
+        if settings.gridborders == "y":
+            self.calculate_padding()  
+
         img = Image.new('RGB', (int(settings.imagewidth), int(settings.imageheight)))
 
         if settings.imagemode == "single":
@@ -775,7 +792,7 @@ def view_files_list(notification = "", prevstate = "menu", mode = "column"): # d
             else:
                 notification = "\nInvalid column file or option...\n"
 
-def view_json(notification = "", mode = "column"): # displays the columns in the terminal, and allows the user to select columns
+def view_json(notification = "\n", mode = "column"): # displays the columns in the terminal, and allows the user to select columns
     if mode == "preset" and settings.presetfile == "":
         menu("\nNo preset file selected...\n")
     else:
@@ -792,7 +809,7 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                     print(str(y) + ". " + columns.json[y - 1]["name"] + " - " + columns.json[y - 1]["value"])
                     count = y
 
-                option = input("\n" + notification + "\nEnter a number (1 to " + str(columns.get_columns_total()) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\n\nOption:")
+                option = input("\n" + notification + "Enter a number (1 to " + str(columns.get_columns_total()) + ") to edit the column, or:\n+. Add a column\nx. Delete a column\nq. Quit\n\nOption:")
 
             elif mode == "preset":
                 print("The following presets are currently defined:\n")
@@ -801,7 +818,7 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                     print(str(y) + ". " + presets.json[y - 1]["name"] + " - " + (presets.json[y - 1]["value"] if presets.json[y - 1]["value"] != "" else "<No value>"))
                     count = y
 
-                option = input("\n" + notification + "\nEnter a number (1 to " + str(len(presets.json)) + ") to edit the preset, or:\nq. Quit\n\nOption:")
+                option = input("\n" + notification + "Enter a number (1 to " + str(len(presets.json)) + ") to edit the preset, or:\nq. Quit\n\nOption:")
 
             if option == "q":
                 menu()
@@ -819,10 +836,10 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                         inputvalue = input("\nEnter a new preset setting value for setting number " + str(option) + ": ")
                         
                         if len(acceptedvalues) != 0 and inputvalue not in acceptedvalues and inputvalue != "":
-                            notification = "Value is not valid for current setting, valid values are " + str(acceptedvalues) + ".\n"
+                            notification = "Value is not valid for current setting, valid values are " + str(acceptedvalues) + ".\n\n"
                         else:
                             presets.json[int(option) - 1]["value"] = inputvalue
-                            notification = "Preset setting updated.\n"                            
+                            notification = "Preset setting updated.\n\n"                            
 
                         presets.update_preset()
                 elif int(option) > count:
@@ -835,14 +852,14 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                 columnvalue = input("Enter the value of the new column: ")
 
                 if columnname[0] == "{": 
-                    notification = columns.generate_columns(columnname, columnvalue) + "\n"
+                    notification = columns.generate_columns(columnname, columnvalue) + "\n\n"
                 else:
-                    notification = columns.create_column(columnname, columnvalue) + "\n"
+                    notification = columns.create_column(columnname, columnvalue) + "\n\n"
 
                 logger.add_log_entry(notification, True)
             elif mode == "column" and option == "x":
                 index = int(input("\nEnter the column number you want to delete: ")) - 1
-                confirm = input("Are you sure you want to delete column " + str(index + 1) + "? y/n\n")
+                confirm = input("Are you sure you want to delete column " + str(index + 1) + "? y/n\n\n")
 
                 if confirm == "y":
                     notification = "Column '" + columns.json[index]["name"] + "' deleted!\n"
@@ -851,9 +868,9 @@ def view_json(notification = "", mode = "column"): # displays the columns in the
                     columns.json.pop(index)
                     columns.update_column_data()
                 else:
-                    notification = "Column NOT deleted!\n"
+                    notification = "Column NOT deleted!\n\n"
             else:
-                notification = "Invalid " + mode + " or option...\n"
+                notification = "Invalid " + mode + " or option...\n\n"
 
 def view_one_column(index): # displays a selected column in the terminal and provides the user with more options for the particular column
     option = ""
@@ -1262,7 +1279,7 @@ def create_file(notification = ""): # creates and writes the file
 
         create_file()
     except Exception as err:
-        logger.add_log_entry("ERROR - " + str(err))
+        logger.add_log_entry("ERROR - " + str(err) + ":\n" + str(traceback.format_exc()), True, False)
         
         try:
             os.remove(file)
@@ -1270,7 +1287,8 @@ def create_file(notification = ""): # creates and writes the file
         except Exception:
             pass
 
-        menu("\nAn error occurred during file creation: " + str(err) + "\n") 
+        menu("\nAn error occurred during file creation: " + "\n" + str(traceback.format_exc())) 
+
 
 def write_file(file):
     currentcolumn = 0
@@ -1409,7 +1427,8 @@ def menu(notification = ""): # main menu, first thing the user will see
         ("\nCurrent preset file: " + settings.presetfolder + "/" + settings.presetfile + "\nThe selected preset file modifies the following settings" + presetmodstring if settings.presetfile != "" else "") +
         "\nCurrent file name: " + filename + 
         ("\nCurrent column file: " + columnfile if settings.fileformat not in settings.imageformats else "") +
-        ("\nImage resolution: " + settings.imagewidth + " x " + settings.imageheight if settings.fileformat in settings.imageformats else "") + 
+        ("\nImage resolution: " + settings.imagewidth + " x " + settings.imageheight if settings.fileformat in settings.imageformats else "") +
+        (", grid padding enabled (image resolution may change)" if settings.imagemode == "grid" and settings.gridborders == "y" else "") + 
         ("\nImage generation mode: " + settings.imagemode if settings.fileformat in settings.imageformats else "") +
         ("\n - Red: (" + settings.rmin + "," + settings.rmax + "), Green: (" + settings.gmin + "," + settings.gmax + "), Blue: (" + settings.bmin + "," + settings.bmax + ")" if settings.fileformat in settings.imageformats and settings.imagemode == "random" else "" ) +
         ("\n - Red: " + settings.rmax + ", Green: " + settings.gmax + ", Blue: " + settings.bmax + "" if settings.fileformat in settings.imageformats and settings.imagemode == "single" else "" ) +
