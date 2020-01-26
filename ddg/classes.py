@@ -400,6 +400,376 @@ class MultiValue():
 
 valuedict = MultiValue()
 
+class Generator():
+
+    def get_filename(self): # generate the name of the file, based on the current settings 'filename' value
+        currentindex = 0
+        filename = ""
+        file = settings.filename
+
+        if file == "":
+            file = input("Enter a name for the file (do not include the format of the file): ")
+
+        now = datetime.datetime.now()
+
+        while currentindex < len(file):
+            if file[currentindex] == "{":
+                while True:
+                    currentindex = currentindex + 1
+                    
+                    if file[currentindex] == "h":
+                        filename = filename + str('%02d' % now.hour)
+                    elif file[currentindex] == "m":
+                        filename = filename + str('%02d' % now.minute)
+                    elif file[currentindex] == "s":
+                        filename = filename + str('%02d' % now.second)
+                    elif file[currentindex] == "d":
+                        filename = filename + str('%02d' % now.day)
+                    elif file[currentindex] == "M":
+                        filename = filename + str('%02d' % now.month)
+                    elif file[currentindex] == "y":
+                        filename = filename + str(now.year)
+                    elif file[currentindex] == "D":
+                        filename = filename + str('%02d' % now.day) + "-" + str('%02d' % now.month) + "-" + str(now.year)
+                    elif file[currentindex] == "T":
+                        filename = filename + str('%02d' % now.hour) + "-" + str('%02d' % now.minute) + "-" + str('%02d' % now.second)
+                    elif file[currentindex] == "?":
+                        filename = filename + str(random.randint(int(settings.min), int(settings.max)))
+                    elif file[currentindex] == "#":
+                        filename = filename + str(settings.numberofrows)
+                    elif file[currentindex] == "}":
+                        break
+                    else:
+                        filename = filename + file[currentindex]
+            else:
+                filename = filename + file[currentindex]
+
+            currentindex = currentindex + 1
+
+        if settings.foldername != "":
+            filename = settings.foldername + "/" + filename
+
+        if settings.fileformat == "":
+            settings.fileformat = "csv"
+
+        filename = filename + "." + settings.fileformat
+
+        return filename
+
+    def get_values(self, value, rownumber): # reads the value for each column, and processes it into dummy data to add to the csv
+        currentindex = 0
+        output = ""
+        randomvalue = False
+        firstrangevalue = ""
+        secondrangevalue = ""
+        secondvalue = False
+        valueformat = "%.0f"
+        isdecimal = False
+
+        while currentindex < len(value):
+            if value[currentindex] == "(":
+                while True:
+                    currentindex = currentindex + 1
+                    if value[currentindex].isdigit() == True and secondvalue == False:
+                        firstrangevalue = firstrangevalue + value[currentindex]
+
+                    elif value[currentindex].isdigit() == True and secondvalue == True:
+                        secondrangevalue = secondrangevalue + value[currentindex]
+
+                    elif value[currentindex] == ",":
+                        secondvalue = True
+
+                    elif value[currentindex] == ".":
+                        isdecimal = True
+                        if secondvalue == False:
+                            firstrangevalue = firstrangevalue + "."
+                        else:
+                            secondrangevalue = secondrangevalue + "."
+
+                    elif value[currentindex] == "-":
+                        isdecimal = True
+                        if secondvalue == False:
+                            firstrangevalue = firstrangevalue + "-"
+                        else:
+                            secondrangevalue = secondrangevalue + "-"
+
+                    elif value[currentindex] == "£":
+                        valueformat = "%.2f"
+
+                    elif value[currentindex] == "*":
+                        valueformat = ""
+
+                    elif value[currentindex] == "%" and secondvalue == False:
+                        valueformat = "%." + firstrangevalue + "f"
+                        firstrangevalue = ""
+
+                    elif value[currentindex] == ")":
+                        generatedvalue = ""
+
+                        if isdecimal == True:
+                            generatedvalue = random.uniform(float(firstrangevalue), float(secondrangevalue))
+                        else:
+                            generatedvalue = random.uniform(int(firstrangevalue), int(secondrangevalue))
+
+                        if valueformat != "":
+                            output = output + str(valueformat % generatedvalue)
+                            valueformat = "%.0f"
+                        else:
+                            output = output + str(generatedvalue)
+
+                        firstrangevalue = ""
+                        secondrangevalue = ""
+                        secondvalue = False
+                        break
+
+            elif value[currentindex] == "[":
+                if valuedict.check_list(value) == False:
+                    valuedict.add_list(value)
+                    valuedict.valueliststates[value] = "ordered"
+                    values = []
+                    tempstring = ""
+                    randomlist = False
+                    orderedlist = True
+                    innervalue = False
+                    multivalue = False
+                    multivaluenumber = ""
+                    countvalue = False
+
+                    while True:
+                        currentindex = currentindex + 1
+
+                        if value[currentindex] == "|" or (value[currentindex] == "," and innervalue == False):
+                            if multivalue == False:
+                                values.append(tempstring)
+                            elif multivalue == True:
+                                for count in range (1, int(multivaluenumber) + 1):
+                                    values.append(tempstring)
+                                multivalue = False
+                                multivaluenumber = ""
+
+                            tempstring = ""
+
+                            if value[currentindex] == "|":
+                                randomlist = True
+                                orderedlist = False
+                            elif value[currentindex] == ",":
+                                randomlist = False
+                                orderedlist = True                        
+
+                        elif value[currentindex] == "#":
+                            multivalue = True
+
+                        elif value[currentindex] == "+":
+                            countvalue = True
+
+                        elif value[currentindex] == "]":
+                            if multivalue == False:
+                                if countvalue:
+                                    for count in range (1, int(tempstring) + 1):
+                                        values.append(str(count))
+                                else:
+                                    values.append(tempstring)
+                            elif multivalue == True:
+                                if countvalue:
+                                    for count in range (1, int(tempstring) + 1):
+                                        for innercount in range (1, int(multivaluenumber) + 1):
+                                            values.append(str(count))
+                                else:
+                                    for count in range (1, int(multivaluenumber) + 1):
+                                        values.append(tempstring)
+                                multivalue = False
+                                multivaluenumber = ""
+
+                            valuedict.valuelists[value].set_list(values)
+                            #logger.add_log_entry(str(valuedict.valuelists[value].list), True)
+                            values = []
+
+                            if randomlist:
+                                valuedict.valueliststates[value] = "random"
+                                output = output + valuedict.valuelists[value].get_random_list_value()
+                            elif orderedlist:
+                                valuedict.valueliststates[value] = "ordered"
+                                output = output + valuedict.valuelists[value].get_next_list_value()
+
+                            break
+                        
+                        else:
+                            if multivalue == True:
+                                multivaluenumber = multivaluenumber + value[currentindex]                       
+                            else:
+                                tempstring = tempstring + value[currentindex]
+
+                            if value[currentindex] == "(":
+                                innervalue = True
+                            if value[currentindex] == ")":
+                                tempstring = get_values(tempstring, rownumber)
+                                innervalue = False
+                elif valuedict.check_list(value):
+                    if valuedict.valueliststates[value] == "random":
+                        output = output + valuedict.valuelists[value].get_random_list_value()
+                    elif valuedict.valueliststates[value] == "ordered":
+                        output = output + valuedict.valuelists[value].get_next_list_value()
+
+                    while True:
+                        if value[currentindex] != "]":
+                            currentindex = currentindex + 1
+                        else:
+                            break
+
+            elif value[currentindex] == "+":
+                output = output + str(rownumber)
+            elif value[currentindex] == "?":
+                output = output + str(random.randint(int(settings.min), int(settings.max)))
+            else:
+                output = output + value[currentindex]
+            currentindex = currentindex + 1
+        return output
+
+    def create_file(self, notification = ""): # creates and writes the file
+        try:
+            file = self.get_filename()
+            folder = settings.foldername
+
+            if folder != "":
+                if os.path.exists(folder + "/") == False:
+                    os.makedirs(folder + "/")
+
+            timetaken = self.write_file(file)
+
+            if settings.compress == "y":
+                self.compress_file(file)
+                if settings.fileformat in settings.imageformats:
+                    message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate and compress '" + file + "." + settings.compresstype.replace("-",".") + "'..."                
+                else:
+                    message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate " + "{0:,}".format(int(settings.numberofrows)) + " rows and compress '" + file + "." + settings.compresstype.replace("-",".") + "'..."
+            else:
+                if settings.fileformat in settings.imageformats:
+                    message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate '" + file + "'..."                
+                else:
+                    message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate " + "{0:,}".format(int(settings.numberofrows)) + " rows in '" + file + "'..."
+
+            logger.add_log_entry(message, True)
+            return "\n" + message + "\n"
+
+        except FileNotFoundError as err:
+            settings.foldername = file[0:file.rfind("/")]
+            settings.filename = settings.filename[settings.filename.rfind("/") + 1:len(settings.filename)]
+
+            self.create_file()
+        except Exception as err:
+            logger.add_log_entry("ERROR - " + str(err) + ":\n" + str(traceback.format_exc()), True, False)
+            
+            try:
+                os.remove(file)
+                logger.add_log_entry("Deleting file '" + file + "'...", True)
+            except Exception:
+                pass
+
+            return "\nAn error occurred during file creation: " + "\n" + str(traceback.format_exc())
+
+
+    def write_file(self, file):
+        currentcolumn = 0
+        try:
+            logger.add_log_entry("Generating file...")
+            print("Generating file...")
+
+            starttime = time.time()
+
+            if settings.fileformat == "csv":
+                with open(file, 'w') as currentfile:
+                    writer = csv.writer(currentfile, delimiter=',', lineterminator='\n', quoting=csv.QUOTE_ALL)
+                    
+                    headers = []
+
+                    for y in range (0, columns.get_columns_total()):
+                        headers.append(columns.json[y]["name"])
+
+                    logger.add_log_entry("Writing headers: " + str([headers]))
+
+                    print("Writing column headers...")
+                    writer.writerows([headers])
+
+                    values = []
+
+                    logger.add_log_entry("Generating values from: " + str(columns.json))
+                    for z in range (1, int(settings.numberofrows) + 1):
+                        if (z % 100) == 0:
+                            print("Generating values... \n" + str(z) + " rows out of " + settings.numberofrows + " generated.")
+                        for x in range (0, columns.get_columns_total()):
+                            values.append(self.get_values(columns.json[x]["value"], int(settings.rownumber) + z))
+                            currentcolumn += 1
+
+                        writer.writerows([values])
+
+                        values = []
+
+            elif settings.fileformat == "xls":
+                book = xlwt.Workbook()
+                sheetname = (settings.sheetname if settings.sheetname != "" else "sheet")
+                sheet = book.add_sheet(sheetname)
+
+                logger.add_log_entry("Writing headers into xls file.")
+
+                print("Writing column headers...")
+                for y in range (0, columns.get_columns_total()):
+                    sheet.write(0, y, columns.json[y]["name"])
+
+                logger.add_log_entry("Generating values from: " + str(columns.json))
+                for z in range (1, int(settings.numberofrows) + 1):
+                    if (z % 100) == 0:
+                        print("Generating values... \n" + str(z) + " rows out of " + settings.numberofrows + " generated.")
+                    for x in range (0, columns.get_columns_total()):
+                        sheet.write(z, x, self.get_values(columns.json[x]["value"], int(settings.rownumber) + z))
+
+                logger.add_log_entry("Writing xls file.")
+                book.save(file)
+
+            elif settings.fileformat in settings.imageformats:
+                imagegenerator.generate_image(file)
+
+            return (time.time() - starttime)
+        
+        except ValueError as err:
+            try:
+                logger.add_log_entry("Deleting file '" + file + "'...", True)
+                os.remove(file)
+            except Exception:
+                pass
+
+            if settings.fileformat not in settings.imageformats:
+                logger.add_log_entry("ERROR - Invalid value specified for column " + str(currentcolumn + 1) + " - " + str(columns.json[currentcolumn]) +", took %.2f seconds before failing." % (time.time() - starttime), True)
+                return "\nAn error occurred during file generation: Invalid value specified for column " + str(currentcolumn + 1) + " - " + str(columns.json[currentcolumn]) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime)   
+            else:
+                logger.add_log_entry("ERROR - " + str(err) + ", took %.2f seconds before failing." % (time.time() - starttime), True)
+                return "\nAn error occurred during image generation: " + str(err) + "\nTook %.2f seconds before failing.\n" % (time.time() - starttime)
+
+    def compress_file(self, file): # compress the generated file, if compression is enabled
+        try:
+            logger.add_log_entry("Compressing generated file...")
+            print("\nCompressing generated file...")
+
+            with open(file, 'rb') as currentfile:
+                if settings.compresstype == "gz":
+                    with gzip.open(file + '.gz', 'wb') as compressedfile:
+                        shutil.copyfileobj(currentfile, compressedfile)
+                elif settings.compresstype == "zip":
+                    with zipfile.ZipFile(file + '.zip', 'w') as compressedfile:
+                        compressedfile.write(file)
+                elif settings.compresstype == "tar-gz":
+                    with tarfile.open(file + '.tar.gz', 'w:gz') as compressedfile:
+                        compressedfile.add(file)
+                elif settings.compresstype == "tar-bz2":
+                    with tarfile.open(file + '.tar.bz2', 'w:bz2') as compressedfile:
+                        compressedfile.add(file)
+
+            os.remove(file)
+        except Exception as err:
+            logger.add_log_entry("ERROR - " + str(err) + "\n", True)
+            menu("\nAn error occurred during compression: " + str(err) + "\n")
+
+generator = Generator()
+
 class ImageGenerator():
     def __init__(self):
         self.pixels = []
