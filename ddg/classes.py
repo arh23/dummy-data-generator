@@ -602,7 +602,7 @@ class Generator():
                             if value[currentindex] == "(":
                                 innervalue = True
                             if value[currentindex] == ")":
-                                tempstring = get_values(tempstring, rownumber)
+                                tempstring = self.get_values(tempstring, rownumber)
                                 innervalue = False
                 elif valuedict.check_list(value):
                     if valuedict.valueliststates[value] == "random":
@@ -872,7 +872,7 @@ class ImageGenerator():
                     )
                   
     def generate_image(self, file):
-        if settings.gridborders == "y":
+        if settings.gridborders == "y" and settings.imagemode == "grid":
             self.calculate_borders()  
 
         img = Image.new('RGB', (int(settings.imagewidth), int(settings.imageheight)))
