@@ -1,5 +1,7 @@
 from PIL import Image
-import subprocess, csv, xlwt, random, time, json, os, sys, platform, datetime, gzip, zipfile, tarfile, shutil, math, traceback
+from chardet import detect
+import subprocess, csv, xlwt, random, time, json, os, sys, platform, datetime, gzip, zipfile, tarfile, shutil, math, traceback, codecs
+
 
 class Settings():
     def __init__(self):
@@ -14,7 +16,9 @@ class Settings():
             {"section":0, "index":24, "key":"presetfile", "desc":"The name of the preset file", "value":""},
             {"section":0, "index":25, "key":"presetfolder", "desc":"The folder where preset files are stored", "value":"presets"},
             {"section":0, "index":13, "key":"sheetname", "desc":"The name of the sheet generated in xls files (defaults to 'sheet' if blank)", "value":""},
-            {"section":1, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation y/n", "value":"n", "acceptedvalues":["y","n"]},
+            {"section":0, "index":34, "key":"encoding", "desc":"Toggle to encode a CSV file after generation (may change characters)", "value":False, "acceptedvalues":"boolean"},
+            {"section":0, "index":35, "key":"encodingtype", "desc":"The type of encoding used to encode the CSV file", "value":"ISO-8859-1", "acceptedvalues":["ISO-8859-1","utf-8","ascii", "windows-1251"]},
+            {"section":1, "index":5, "key":"compress", "desc":"Toggle to compress the file after generation", "value":False, "acceptedvalues":"boolean"},
             {"section":1, "index":12, "key":"compresstype", "desc":"The type of compression used, if compression is enabled", "value":"gz", "acceptedvalues":["gz", "zip", "tar-gz", "tar-bz2"]},            
             {"section":2, "index":7, "key":"numberofrows", "desc":"The number of rows to generate (will ask at time of generation if blank)", "value":""},                    
             {"section":2, "index":8, "key":"rownumber", "desc":"The index where the script starts from (not inclusive, counts will start at value + 1)", "value":"0"},
@@ -36,8 +40,10 @@ class Settings():
             {"section":3, "index":29, "key":"gridbgred", "desc":"The maximum value for random red intensity (for grid image backgrounds)", "value":"255"},
             {"section":3, "index":30, "key":"gridbggreen", "desc":"The maximum value for random green intensity (for grid image backgrounds)", "value":"255"}, 
             {"section":3, "index":31, "key":"gridbgblue", "desc":"The maximum value for random blue intensity (for grid image backgrounds)", "value":"255"},
-            {"section":3, "index":32, "key":"gridborders", "desc":"Enable the increase of image height and width to include the border edges of the grid", "value":"n", "acceptedvalues":["y","n"]},                                    
-            {"section":4, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance) y/n", "value":"n", "acceptedvalues":["y","n"]}
+            {"section":3, "index":32, "key":"gridborders", "desc":"Enable the increase of image height and width to include the border edges of the grid", "value":False, "acceptedvalues":"boolean"},
+            {"section":4, "index":36, "key":"mainfolder", "desc":"The folder containing the columns, presets and generated files", "value":"."},                                    
+            {"section":4, "index":11, "key":"logging", "desc":"Enable logging of various events throughout generation (can affect performance)", "value":False, "acceptedvalues":"boolean"},
+            {"section":4, "index":33, "key":"debugging", "desc":"Enable debug functionality while using the UI", "value":False, "acceptedvalues":"boolean"}
         ]
         self.update_values()
 
@@ -48,7 +54,9 @@ class Settings():
         self.columnfile = self.get_setting_value("columnfile")
         self.columnfolder = self.get_setting_value("columnfolder")
         self.presetfile = self.get_setting_value("presetfile")
-        self.presetfolder =self.get_setting_value("presetfolder")
+        self.presetfolder = self.get_setting_value("presetfolder")
+        self.encoding = self.get_setting_value("encoding")
+        self.encodingtype = self.get_setting_value("encodingtype")
         self.compress = self.get_setting_value("compress")
         self.compresstype = self.get_setting_value("compresstype")
         self.fileformat = self.get_setting_value("fileformat")
@@ -73,8 +81,10 @@ class Settings():
         self.gridbgred = self.get_setting_value("gridbgred")   
         self.gridbggreen = self.get_setting_value("gridbggreen")
         self.gridbgblue = self.get_setting_value("gridbgblue")
-        self.gridborders = self.get_setting_value("gridborders")                          
+        self.gridborders = self.get_setting_value("gridborders")
+        self.mainfolder = self.get_setting_value("mainfolder")                          
         self.log = self.get_setting_value("logging")
+        self.debugging = self.get_setting_value("debugging")
 
     def get_settings(self): # gets the settings from the settings json file, if the settings json file is not present, this will create the file
         if os.path.exists('settings.json') == False:
@@ -90,7 +100,15 @@ class Settings():
         try:
             for x in range (0, len(self.json)):
                 if self.json[x]["key"] == value:
-                    settingvalue = self.json[x]["value"]
+                    if "acceptedvalues" in self.json[x] and self.json[x]["acceptedvalues"] == "boolean":
+                        if self.json[x]["value"] == "0" or self.json[x]["value"] == False or self.json[x]["value"] == "False":
+                            settingvalue = False
+                        elif self.json[x]["value"] == "1" or self.json[x]["value"] == True or self.json[x]["value"] == "True":
+                            settingvalue = True
+                        else:
+                            settingvalue = False
+                    else:
+                        settingvalue = self.json[x]["value"]
             
             return settingvalue
         except UnboundLocalError:
@@ -151,6 +169,18 @@ class Settings():
 
         self.update_settings()
 
+    def get_file_path(self):
+        path = os.path.join(self.mainfolder, self.foldername)
+        return path
+
+    def get_columns_path(self):
+        path = os.path.join(self.mainfolder, self.columnfolder)
+        return path
+
+    def get_presets_path(self):
+        path = os.path.join(self.mainfolder, self.presetfolder)
+        return path
+
 settings = Settings()
 
 class Logger():
@@ -159,7 +189,7 @@ class Logger():
 
     def get_logging_state(self): # checks settings if logging is enabled, if it cannot check settings, logging will be disabled
         try:
-            if settings.log == "y":
+            if settings.log:
                 return True
             else:
                 return False
@@ -193,10 +223,10 @@ class Presets():
         self.jsonfilename = settings.presetfile
 
         if settings.presetfolder != "":
-            if os.path.exists(settings.presetfolder + "/") == False:
-                os.makedirs(settings.presetfolder + "/")
+            if os.path.exists(settings.get_presets_path()) == False:
+                os.makedirs(settings.get_presets_path())
 
-            self.jsonfilename = settings.presetfolder + "/" + settings.presetfile
+            self.jsonfilename = "{0}{1}{2}".format(settings.get_presets_path(), os.path.sep, settings.presetfile)
 
         if settings.presetfile != "":
 
@@ -233,10 +263,10 @@ class Columns():
         self.jsonfilename = settings.columnfile
 
         if settings.columnfolder != "":
-            if os.path.exists(settings.columnfolder + "/") == False:
-                os.makedirs(settings.columnfolder + "/")
+            if os.path.exists(settings.get_columns_path()) == False:
+                os.makedirs(settings.get_columns_path())
 
-            self.jsonfilename = settings.columnfolder + "/" + settings.columnfile
+            self.jsonfilename = "{0}{1}{2}".format(settings.get_columns_path(), os.path.sep, settings.columnfile)
 
         if os.path.exists(self.jsonfilename) == False:
             with open(self.jsonfilename, "w") as jsonfile:
@@ -262,8 +292,11 @@ class Columns():
     def get_columns_total(self): # returns number of different columns in the column json data
         return len(self.json)
 
-    def create_column(self, name, value):
-        self.json.append({"name":name, "value":value})
+    def create_column(self, name, value, index = None):
+        if index == None:
+            self.json.append({"name":name, "value":value})
+        else:
+            self.json.insert(index, {"name":name, "value":value})
 
         self.update_column_data()
 
@@ -402,13 +435,10 @@ valuedict = MultiValue()
 
 class Generator():
 
-    def get_filename(self): # generate the name of the file, based on the current settings 'filename' value
+    def get_filename(self, nameonly = False): # generate the name of the file, based on the current settings 'filename' value
         currentindex = 0
         filename = ""
         file = settings.filename
-
-        if file == "":
-            file = input("Enter a name for the file (do not include the format of the file): ")
 
         now = datetime.datetime.now()
 
@@ -446,8 +476,8 @@ class Generator():
 
             currentindex = currentindex + 1
 
-        if settings.foldername != "":
-            filename = settings.foldername + "/" + filename
+        if settings.foldername != "" and nameonly is False:
+            filename = "{0}{1}{2}".format(settings.get_file_path(), os.path.sep, filename)
 
         if settings.fileformat == "":
             settings.fileformat = "csv"
@@ -628,15 +658,15 @@ class Generator():
     def create_file(self, notification = ""): # creates and writes the file
         try:
             file = self.get_filename()
-            folder = settings.foldername
+            folder = settings.get_file_path()
 
             if folder != "":
-                if os.path.exists(folder + "/") == False:
-                    os.makedirs(folder + "/")
+                if os.path.exists(folder) == False:
+                    os.makedirs(folder)
 
             timetaken = self.write_file(file)
 
-            if settings.compress == "y":
+            if settings.compress:
                 self.compress_file(file)
                 if settings.fileformat in settings.imageformats:
                     message = ("Took %.4f seconds" if timetaken < 0.01 else "Took %.2f seconds") % timetaken + " to generate and compress '" + file + "." + settings.compresstype.replace("-",".") + "'..."                
@@ -676,33 +706,42 @@ class Generator():
 
             starttime = time.time()
 
+            if settings.encoding is False:
+                settings.encodingtype = None
+
             if settings.fileformat == "csv":
-                with open(file, 'w') as currentfile:
-                    writer = csv.writer(currentfile, delimiter=',', lineterminator='\n', quoting=csv.QUOTE_ALL)
-                    
-                    headers = []
+                try:
+                    with open(file, 'w', encoding=settings.encodingtype) as currentfile:
+                        writer = csv.writer(currentfile, delimiter=',', lineterminator='\n', quoting=csv.QUOTE_ALL)
+                        
+                        headers = []
 
-                    for y in range (0, columns.get_columns_total()):
-                        headers.append(columns.json[y]["name"])
+                        for y in range (0, columns.get_columns_total()):
+                            headers.append(columns.json[y]["name"])
 
-                    logger.add_log_entry("Writing headers: " + str([headers]))
+                        logger.add_log_entry("Writing headers: " + str([headers]))
 
-                    print("Writing column headers...")
-                    writer.writerows([headers])
-
-                    values = []
-
-                    logger.add_log_entry("Generating values from: " + str(columns.json))
-                    for z in range (1, int(settings.numberofrows) + 1):
-                        if (z % 100) == 0:
-                            print("Generating values... \n" + str(z) + " rows out of " + settings.numberofrows + " generated.")
-                        for x in range (0, columns.get_columns_total()):
-                            values.append(self.get_values(columns.json[x]["value"], int(settings.rownumber) + z))
-                            currentcolumn += 1
-
-                        writer.writerows([values])
+                        print("Writing column headers...")
+                        writer.writerows([headers])
 
                         values = []
+
+                        logger.add_log_entry("Generating values from: " + str(columns.json))
+                        for z in range (1, int(settings.numberofrows) + 1):
+                            if (z % 100) == 0:
+                                print("Generating values... \n" + str(z) + " rows out of " + settings.numberofrows + " generated.")
+                            for x in range (0, columns.get_columns_total()):
+                                values.append(self.get_values(columns.json[x]["value"], int(settings.rownumber) + z))
+                                currentcolumn += 1
+
+                            writer.writerows([values])
+
+                            values = []
+                except UnicodeEncodeError as err:
+                    logger.add_log_entry("Failed to encode using {0}: {1}".format(settings.encodingtype, str(err)), True)
+                    logger.add_log_entry("Retrying using ISO-8859-1...", True)
+                    settings.encodingtype = "ISO-8859-1"
+                    self.write_file(file)
 
             elif settings.fileformat == "xls":
                 book = xlwt.Workbook()
@@ -749,24 +788,34 @@ class Generator():
             logger.add_log_entry("Compressing generated file...")
             print("\nCompressing generated file...")
 
-            with open(file, 'rb') as currentfile:
+            filename = self.get_filename(True)
+            shutil.copy(file, ".")
+            os.remove(file)
+
+            newfile = os.path.join(".", filename)
+
+            compressedfilename = "{0}.{1}".format(newfile, settings.compresstype.replace("-","."))
+
+            with open(newfile, 'rb') as currentfile:
                 if settings.compresstype == "gz":
-                    with gzip.open(file + '.gz', 'wb') as compressedfile:
+                    with gzip.open(compressedfilename, 'wb') as compressedfile:
                         shutil.copyfileobj(currentfile, compressedfile)
                 elif settings.compresstype == "zip":
-                    with zipfile.ZipFile(file + '.zip', 'w') as compressedfile:
-                        compressedfile.write(file)
+                    with zipfile.ZipFile(compressedfilename, 'w') as compressedfile:
+                        compressedfile.write(filename)
                 elif settings.compresstype == "tar-gz":
-                    with tarfile.open(file + '.tar.gz', 'w:gz') as compressedfile:
-                        compressedfile.add(file)
+                    with tarfile.open(compressedfilename, 'w:gz') as compressedfile:
+                        compressedfile.add(filename)
                 elif settings.compresstype == "tar-bz2":
-                    with tarfile.open(file + '.tar.bz2', 'w:bz2') as compressedfile:
-                        compressedfile.add(file)
+                    with tarfile.open(compressedfilename, 'w:bz2') as compressedfile:
+                        compressedfile.add(filename)
 
-            os.remove(file)
+            shutil.copy(compressedfilename, settings.get_file_path())
+            os.remove(compressedfilename)
+            os.remove(newfile)
         except Exception as err:
             logger.add_log_entry("ERROR - " + str(err) + "\n", True)
-            menu("\nAn error occurred during compression: " + str(err) + "\n")
+            return "\nAn error occurred during compression: " + str(err) + "\n"
 
 generator = Generator()
 
@@ -872,7 +921,7 @@ class ImageGenerator():
                     )
                   
     def generate_image(self, file):
-        if settings.gridborders == "y" and settings.imagemode == "grid":
+        if settings.gridborders and settings.imagemode == "grid":
             self.calculate_borders()  
 
         img = Image.new('RGB', (int(settings.imagewidth), int(settings.imageheight)))

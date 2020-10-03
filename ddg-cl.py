@@ -1,6 +1,8 @@
 #! coding: utf-8
+#!/usr/bin/env python
+
 import subprocess, csv, xlwt, random, time, json, os, sys, platform, datetime, gzip, zipfile, tarfile, shutil, math, traceback
-from classes import settings, logger, presets, columns, valuedict, generator, imagegenerator
+from ddg.classes import settings, logger, presets, columns, valuedict, generator, imagegenerator
 
 def clear(platformname = sys.platform): # clear the terminal buffer ~ NOTE: this seems to be quite buggy, need to come back to this
     if platformname == "win32":
@@ -21,7 +23,7 @@ def view_settings(notification = ""): # displays setting sections in the termina
         print("2. File compression settings")
         print("3. Data generation settings")
         print("4. Image generation settings")  
-        print("5. Logging settings")  
+        print("5. Application settings")  
 
         option = input(notification + "\nEnter the section number (1 to 3) to view the settings for that section, or:\nq. Quit\n\nOption:")
 
@@ -120,19 +122,19 @@ def view_files_list(notification = "", prevstate = "menu", mode = "column"): # d
         subnotif = "\n"
 
         if mode == "column":
-            print("The following column files are located in the '" + settings.columnfolder + "' folder: \n\nCurrent columns file: " + settings.columnfile + "\n")
+            print("The following column files are located in the '{0}' folder: \n\nCurrent columns file: {1}\n".format(settings.get_columns_path(), settings.columnfile))
 
             if settings.columnfolder == "":
                 settings.columnfolder = "."
 
-            files = os.listdir(settings.columnfolder)
+            files = os.listdir(settings.get_columns_path())
         elif mode == "preset":
-            print("The following preset files are located in the '" + settings.presetfolder + "' folder: \n" + ("\nCurrent preset file: " + settings.presetfile + "\n" if settings.presetfile != "" else ""))
+            print("The following preset files are located in the '{0}' folder: \n{1}".format(settings.get_presets_path(), ("\nCurrent preset file: {0}\n".format((settings.presetfile if settings.presetfile != "" else "")))))
 
             if settings.presetfolder == "":
                 settings.presetfolder = "."
 
-            files = os.listdir(settings.presetfolder)
+            files = os.listdir(settings.get_presets_path())
 
         fileslist = []
 
@@ -189,9 +191,9 @@ def view_files_list(notification = "", prevstate = "menu", mode = "column"): # d
             deletefilename = input("\nEnter the name of the file to be deleted (excluding file extension): ") + ".json"
 
             if mode == "column":
-                deletepath = settings.columnfolder + "/" + deletefilename
+                deletepath = "{0}{1}{2}".format(settings.get_columns_path(), os.path.sep, deletefilename)
             elif mode == "preset":
-                deletepath = settings.presetfolder + "/" + deletefilename     
+                deletepath = "{0}{1}{2}".format(settings.get_presets_path(), os.path.sep, deletefilename)   
                                
             if os.path.exists(deletepath):
                 os.remove(deletepath)
@@ -236,13 +238,13 @@ def view_files_list(notification = "", prevstate = "menu", mode = "column"): # d
                     if mode == "column":
                             duplicatename = input("Enter name for duplicated file (do not include extension): ") + ".json"
 
-                            originallocation = settings.columnfolder + "/" + settings.columnfile
-                            duplicatelocation = settings.columnfolder + "/" + duplicatename
+                            originallocation = "{0}{1}{2}".format(settings.get_columns_path(), os.path.sep, settings.columnfile)
+                            duplicatelocation = "{0}{1}{2}".format(settings.get_columns_path(), os.path.sep, duplicatename)
                     elif mode == "preset":
                             duplicatename = input("Enter name for duplicated file (do not include extension): ") + ".json"
 
-                            originallocation = settings.presetfolder + "/" + settings.presetfile
-                            duplicatelocation = settings.presetfolder + "/" + duplicatename
+                            originallocation = "{0}{1}{2}".format(settings.get_columns_path(), os.path.sep, settings.presetfile)
+                            duplicatelocation = "{0}{1}{2}".format(settings.get_columns_path(), os.path.sep, duplicatename)
 
                     try:
                         shutil.copy(originallocation, duplicatelocation)
@@ -513,6 +515,9 @@ def create_file(notification = ""):
             settings.numberofrows = input(notification + "Enter the number of rows to generate (or enter 'q' or 'b' to go back to the menu): ")
             clear()
 
+        if settings.filename == "":
+            settings.filename = input("Enter a name for the file (do not include the format of the file): ")
+
         if settings.numberofrows == "q" or settings.numberofrows == "b":
             menu()
         elif settings.numberofrows.isdigit() == False and (settings.numberofrows != 'q' or settings.numberofrows != 'b'):
@@ -525,45 +530,51 @@ def create_file(notification = ""):
 def menu(notification = ""): # main menu, first thing the user will see
     clear()
 
+    settings.update_settings_file()
     settings.update_values()
     presets.get_presets()
-
-    if settings.presetfile != "":
-        presetmodstring = ": "
-
-        for presetsetting in presets.json:
-            if presetsetting["value"] != "":
-                presetmodstring += "\n - " + presetsetting["name"]
-
-        if presetmodstring == ": ":
-            presetmodstring += "<None>"
-
-    filename = settings.filename 
-    columnfile = settings.columnfile
-
-    if (settings.foldername != ""):
-        if settings.filename != "":
-            filename = settings.foldername + "/" + settings.filename + ("." + settings.fileformat if settings.fileformat != "" else ".csv") + ("." + settings.compresstype.replace("-",".") if settings.compress == "y" else "")
-        else:
-            filename = settings.foldername + "/<file name not specified>"
-
-    if (settings.columnfolder != ""):
-        columnfile = settings.columnfolder + "/" + settings.columnfile
 
     columns.get_columns()
     valuedict.reset_indexes()
 
-    print("Dummy data generator " + version + "\nAndrew H 2020\n" +
-        ("\nCurrent preset file: " + settings.presetfolder + "/" + settings.presetfile + "\nThe selected preset file modifies the following settings" + presetmodstring if settings.presetfile != "" else "") +
-        "\nCurrent file name: " + filename + 
-        ("\nCurrent column file: " + columnfile if settings.fileformat not in settings.imageformats else "") +
-        ("\nImage resolution: " + settings.imagewidth + " x " + settings.imageheight if settings.fileformat in settings.imageformats else "") +
-        (", grid borders enabled (image resolution may change)" if settings.imagemode == "grid" and settings.gridborders == "y" else "") + 
-        ("\nImage generation mode: " + settings.imagemode if settings.fileformat in settings.imageformats else "") +
-        ("\n - Red: (" + settings.rmin + "," + settings.rmax + "), Green: (" + settings.gmin + "," + settings.gmax + "), Blue: (" + settings.bmin + "," + settings.bmax + ")" if settings.fileformat in settings.imageformats and settings.imagemode == "random" else "" ) +
-        ("\n - Red: " + settings.rmax + ", Green: " + settings.gmax + ", Blue: " + settings.bmax + "" if settings.fileformat in settings.imageformats and settings.imagemode == "single" else "" ) +
-        ("\n - Red: (" + settings.rmin + "," + settings.rmax + "), Green: (" + settings.gmin + "," + settings.gmax + "), Blue: (" + settings.bmin + "," + settings.bmax + ")\n - Row height: " + settings.rowheight if settings.fileformat in settings.imageformats and settings.imagemode == "row" else "" ) +
-        ("\nLogging enabled\n" if settings.log == "y" else "\n") + notification)
+    if settings.presetfile != "":
+        presetmodstring = ""
+
+        for presetsetting in presets.json:
+            if presetsetting["value"] != "":
+                presetmodstring += "\n - {0}".format(presetsetting["name"])
+
+        if presetmodstring == "":
+            presetmodstring += "<None>"
+
+    columnfile = os.path.join(settings.get_columns_path(), settings.columnfile)
+    presetfile = os.path.join(settings.get_presets_path(), settings.presetfile)
+
+    if (settings.foldername != ""):
+        if settings.filename != "":
+            filename = "{0}{1}{2}.{3}{4}".format(
+                settings.get_file_path(), 
+                os.path.sep, 
+                settings.filename, 
+                (settings.fileformat if settings.fileformat != "" else "csv"), 
+                (".{}".format(settings.compresstype.replace("-",".")) if settings.compress else "")
+            )
+        else:
+            filename = "{0}{1}<filename not specified>".format(settings.get_file_path(), os.path.sep)
+
+    version = "v0.9.0-{0}".format(str(subprocess.check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip())[:7])
+    print("Dummy data generator {0}\nAndrew H 2020\n".format(version) +
+    ("\nCurrent preset file: {0}\nThe selected preset file modifies the following settings: {1}".format(presetfile, presetmodstring) if settings.presetfile != "" else "") +
+    "\nCurrent file name: {0}".format(filename) + 
+    ("\nCurrent column file: {0}".format(columnfile) if settings.fileformat not in settings.imageformats else "") +
+    ("\nCSV File encoding: {0}".format(settings.encodingtype) if settings.encoding else "") + 
+    ("\nImage resolution: {0} x {1}".format(settings.imagewidth, settings.imageheight) if settings.fileformat in settings.imageformats else "") +
+    (", grid borders enabled (image resolution may change)" if settings.imagemode == "grid" and settings.gridborders else "") + 
+    ("\nImage generation mode: {0}".format(settings.imagemode) if settings.fileformat in settings.imageformats else "") +
+    ("\n - Red: ({0},{1}), Green: ({2},{3}), Blue: ({4},{5})".format(settings.rmin, settings.rmax, settings.gmin, settings.gmax, settings.bmin, settings.bmax) if settings.fileformat in settings.imageformats and settings.imagemode == "random" else "" ) +
+    ("\n - Red: {0}, Green: {1}, Blue: {2}".format(settings.rmax, settings.gmax, settings.bmax) if settings.fileformat in settings.imageformats and settings.imagemode == "single" else "") +
+    ("\n - Red: ({0},{1}), Green: ({2},{3}), Blue: ({4},{5})\n - Row Height: {6}".format(settings.rmin, settings.rmax, settings.gmin, settings.gmax, settings.bmin, settings.bmax, settings.rowheight) if settings.fileformat in settings.imageformats and settings.imagemode == "row" else "" ) +
+    ("\nLogging enabled" if settings.log else "\n") + notification)
 
     print("1. Generate file")
     if settings.fileformat not in settings.imageformats:
@@ -598,8 +609,6 @@ def menu(notification = ""): # main menu, first thing the user will see
 
 clear()
 print("Loading...")
-
-version = "v0.9.0-" + str(subprocess.check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip())[:7]
 
 settings.update_settings_file()
 menu()
